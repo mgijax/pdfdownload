@@ -76,7 +76,7 @@ if [ "${suffix}" == "gz" ]; then
 		exitIfFailed $? "failed to move PDF file into directory"
 
 		rm -rf `dirname ${pdfPath}`
-		exitItFailed $? "failed to remove empty directory"
+		exitIfFailed $? "failed to remove empty directory"
 
 		rm ${directory}/${filename}
 		exitIfFailed $? "failed to remove tar file"
