@@ -148,8 +148,8 @@ def getPMCIDs(papers):
     idConverter = PubMedCentralAgent.IDConverterAgent()
     pmcIDs = idConverter.getPMCIDs(doiIDs)
 
-    profiler.stamp('Got %d PMC IDs' % len(pmcIDs))
     reportMissing(pmcIDs, 'PMC ID')
+    profiler.stamp('Got %d PMC IDs' % len(pmcIDs))
     return pmcIDs.values()
 
 def getUrls(pmcIDs):
@@ -161,8 +161,8 @@ def getUrls(pmcIDs):
     pdfLookup = PubMedCentralAgent.PDFLookupAgent()
     urls = pdfLookup.getUrls(pmcIDs)
     
-    profiler.stamp('Got %d URLs' % len(urls))
     reportMissing(urls, 'URL')
+    profiler.stamp('Got %d URLs' % len(urls))
     return urls.values()
 
 i = 0
@@ -176,14 +176,7 @@ def downloadUrls(urls):
     for url in urls:
         ids.append(dispatcher.schedule([ './download_pdf.sh', url, './test' ]))
 
-    def report():
-        global i
-        if i % 10 == 0:
-            profiler.stamp('%d running, %d waiting' % (dispatcher.getActiveProcessCount(), dispatcher.getWaitingProcessCount()))
-        i = i + 1
-        return 
-
-    dispatcher.wait(report)
+    dispatcher.wait()
     profiler.stamp('Finished downloading files')
     return
 
@@ -195,7 +188,10 @@ if __name__ == '__main__':
     pmcIDs = getPMCIDs(papers)
     urls = getUrls(pmcIDs)
     downloadUrls(urls)
+    print '-' * 40
+    print 'Profiler Report'
     profiler.write()
     print '-' * 40
+    print 'PLOS Governor Report'
     for line in governor.getStatistics():
         print line
