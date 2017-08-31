@@ -67,7 +67,9 @@ if [ "${suffix}" == "gz" ]; then
 	# convert the filename from the gzipped name to just the *tar name
 	filename=`echo ${filename} | sed 's/.gz$//'`
 
-	pdfPath=`tar --list -f ${directory}/${filename} | grep 'pdf$'`
+	# assume the primary PDF (as opposed to supplements) will sort first
+	pdfPath=`tar --list -f ${directory}/${filename} | grep 'pdf$' | sort -u | head -1`
+
 	if [ "${pdfPath}" != "" ]; then
 		tar -x ${pdfPath} -f ${directory}/${filename}
 		exitIfFailed $? "failed to pull ${pdfPath} from gzip file"
