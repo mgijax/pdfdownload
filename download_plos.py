@@ -1,17 +1,21 @@
 #!/usr/local/bin/python
 
 # Name: download_plos.py
-# Purpose: Download PDFs from PLOS for the preceding seven days.  This includes papers where:
+# Purpose: Download PDFs from PLOS for the preceding sixty days.  This includes papers where:
 #   1. title, abstract, or body contain "mice"
 #   2. journal is PLOS One, PLOS Genetics, PLOS Biology, or PLOS Pathogens
 #   3. issue and journal are non-null (to avoid uncorrected proofs)
-# Notes: destination folder of PDFs is pulled from configuration
+#   4. the DOI ID is not already in MGI
+# Notes: Destination folder of PDFs is pulled from configuration.  There is some lag time
+#    between when papers are published and when they are available for download, and that
+#    lag appears to be non-standard, so we allow a two month cushion in hopes to catch
+#    all relevant papers eventually.
 
 import sys
 sys.path.insert(0, '/usr/local/mgi/live/lib/python')
 
 USAGE = '''Usage: %s [yyyy-mm-dd] [yyyy-mm-dd]
-    The default behavior (no parameters) is to get files for the seven days
+    The default behavior (no parameters) is to get files for the sixty days
     preceding today.  If you specify dates, you must specify both.  The first
     is the start date (inclusive) and the second is the end date (exclusive).
     That is, searching from 2001-01-01 to 2001-01-03 will return papers with
@@ -26,17 +30,35 @@ import Dispatcher
 import HttpRequestGovernor
 import Profiler
 import PubMedCentralAgent
+import caches
+
+###--- setup ---###
+
+for envVar in [ 'PG_DBSERVER', 'PG_DBNAME', 'MGI_PUBLICUSER', 'MGI_PUBLICPASSWORD', 'PDFDIR', 'WINDOW_SIZE' ]:
+    if envVar not in os.environ:
+        raise Exception('Missing environment variable: %s' % envVar)
+
+caches.initialize(os.environ['MGI_PUBLICUSER'], os.environ['MGI_PUBLICPASSWORD'],
+    os.environ['PG_DBSERVER'], os.environ['PG_DBNAME'])
 
 ###--- Globals ---###
 
 profiler = Profiler.Profiler()
 
+# which PLOS journals do we want to search?
 journals = [ 'PLOS ONE', 'PLOS Genetics', 'PLOS Biology', 'PLOS Pathogens']
+
+# URL for contacting PLOS to find articles (plug in journal name, start date, end date, start row, and 
+# max number of rows to return)
 baseUrl = 'http://api.plos.org/search?q=journal:"%s" AND (abstract:"mice" OR body:"mice" OR title:"mice") ' + \
     'AND publication_date:[%sT00:00:00Z TO %sT00:00:00Z] AND issue:[* TO *] AND volume:[* TO *]' + \
     '&fl=id,journal,title,volume,issue,publication_date&wt=json&start=%d&rows=%d'
 
+# handles timing issues for PLOS requests, so we can stay within their usage caps
 governor = HttpRequestGovernor.HttpRequestGovernor()
+
+# number of days to look back to try to find articles (due to delay in transfer from PLOS to PubMed Central)
+windowSize = int(os.environ['WINDOW_SIZE'])
 
 ###--- functions ---###
 
@@ -52,8 +74,8 @@ def getDates():
     # Purpose: get the start and stop dates for the download
     # Returns: (start date, stop date)
     # Throws: nothing
-    # Notes: The stop date is midnight today, while the start date is midnight seven days before.
-    #    This will not get papers for today, but for the seven days preceding today.
+    # Notes: The stop date is midnight today, while the start date is midnight 'windowSize' days before.
+    #    This will not get papers for today, but for the 'windowSize' days preceding today.
     
     if len(sys.argv) > 1:
         if len(sys.argv) != 3:
@@ -69,7 +91,8 @@ def getDates():
             bailout('Invalid stop date: %s' % stopDate)
             
     else:
-        startDate = time.strftime("%Y-%m-%d", time.localtime(time.time() - 7 * 24 * 60 * 60))
+        # 24 hours per day, 60 minutes per hour, 60 seconds per minute
+        startDate = time.strftime("%Y-%m-%d", time.localtime(time.time() - windowSize * 24 * 60 * 60))
         stopDate =  time.strftime("%Y-%m-%d", time.localtime(time.time()))
 
     profiler.stamp('dates: %s to %s' % (startDate, stopDate))
@@ -133,10 +156,15 @@ def reportMissing(map, missingType):
     keys = map.keys()
     keys.sort()
     
+    ct = 0      # count of missing items
+    
     for key in keys:
         if not map[key]:
             print 'Missing %s for %s' % (missingType, key)
             del map[key]
+            ct = ct + 1
+
+    profiler.stamp('%d missing %ss' % (ct, missingType))
     return
     
 def getPMCIDs(papers):
@@ -165,7 +193,6 @@ def getUrls(pmcIDs):
     profiler.stamp('Got %d URLs' % len(urls))
     return urls.values()
 
-i = 0
 def downloadUrls(urls):
     # Purpose: download the PDF files identified by 'urls'
     # Returns: nothing
@@ -174,17 +201,36 @@ def downloadUrls(urls):
     dispatcher = Dispatcher.Dispatcher()
     ids = []
     for url in urls:
-        ids.append(dispatcher.schedule([ './download_pdf.sh', url, './test' ]))
+        ids.append(dispatcher.schedule([ './download_pdf.sh', url, os.environ['PDFDIR'] ]))
 
     dispatcher.wait()
-    profiler.stamp('Finished downloading files')
+    profiler.stamp('Finished downloading %d files' % len(urls))
     return
 
+def filterPapers(papers):
+    # Purpose: eliminate from 'papers' any that are already in the database (based on DOI ID)
+    # Returns: list of dictionaries (subset of 'papers')
+    # Throws: Exception if there are problems reading cache of IDs from database
+    
+    doiCache = caches.DOICache()
+    profiler.stamp('Cached %d DOI IDs from db' % len(doiCache))
+
+    ct = 0              # count of papers already in database
+    i = len(papers)
+    while i > 0:
+        i = i - 1
+        if papers[i]['id'] in doiCache:
+            del papers[i]
+            ct = ct + 1
+            
+    profiler.stamp('Skipped %d papers already in db' % ct)
+    return papers 
+    
 ###--- main program ---###
 
 if __name__ == '__main__':
     startDate, stopDate = getDates()
-    papers = getPapers(startDate, stopDate)
+    papers = filterPapers(getPapers(startDate, stopDate))
     pmcIDs = getPMCIDs(papers)
     urls = getUrls(pmcIDs)
     downloadUrls(urls)
