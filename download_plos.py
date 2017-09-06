@@ -60,6 +60,9 @@ governor = HttpRequestGovernor.HttpRequestGovernor()
 # number of days to look back to try to find articles (due to delay in transfer from PLOS to PubMed Central)
 windowSize = int(os.environ['WINDOW_SIZE'])
 
+# list of strings, each of which is an error to report
+errors = []
+
 ###--- functions ---###
 
 def bailout (error, showUsage = False):
@@ -152,7 +155,8 @@ def getPapers(startDate, stopDate):
 
 def reportMissing(map, missingType):
     # Purpose: report any keys of 'map' that have None associated as a value
-    
+    global errors
+
     keys = map.keys()
     keys.sort()
     
@@ -160,11 +164,11 @@ def reportMissing(map, missingType):
     
     for key in keys:
         if not map[key]:
-            print 'Missing %s for %s' % (missingType, key)
+            errors.append('Missing %s for %s' % (missingType, key))
             del map[key]
             ct = ct + 1
 
-    profiler.stamp('%d missing %ss' % (ct, missingType))
+    profiler.stamp('%d missing %ss, got %d' % (ct, missingType, len(map)))
     return
     
 def getPMCIDs(papers):
@@ -177,7 +181,6 @@ def getPMCIDs(papers):
     pmcIDs = idConverter.getPMCIDs(doiIDs)
 
     reportMissing(pmcIDs, 'PMC ID')
-    profiler.stamp('Got %d PMC IDs' % len(pmcIDs))
     return pmcIDs.values()
 
 def getUrls(pmcIDs):
@@ -190,7 +193,6 @@ def getUrls(pmcIDs):
     urls = pdfLookup.getUrls(pmcIDs)
     
     reportMissing(urls, 'URL')
-    profiler.stamp('Got %d URLs' % len(urls))
     return urls.values()
 
 def downloadUrls(urls):
@@ -234,10 +236,19 @@ if __name__ == '__main__':
     pmcIDs = getPMCIDs(papers)
     urls = getUrls(pmcIDs)
     downloadUrls(urls)
+
     print '-' * 40
     print 'Profiler Report'
     profiler.write()
+
     print '-' * 40
     print 'PLOS Governor Report'
     for line in governor.getStatistics():
-        print line
+        print ' - %s' % line
+
+    print '-' * 40
+    print 'Non-Fatal Errors (missing IDs and URLs will generally be picked up in future runs)'
+    for line in errors:
+        print ' - %s' % line
+
+    print '-' * 40
