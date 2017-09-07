@@ -19,7 +19,7 @@ USAGE = '''Usage: %s [yyyy-mm-dd] [yyyy-mm-dd]
     preceding today.  If you specify dates, you must specify both.  The first
     is the start date (inclusive) and the second is the end date (inclusive).
     That is, searching from 2001-01-01 to 2001-01-03 will return papers with
-    a publication date of 2001-01-01 and 2001-01-02.
+    a publication date of 2001-01-01 and 2001-01-03.
 ''' % sys.argv[0]
 
 import os 
@@ -78,7 +78,6 @@ def getDates():
     # Returns: (start date, stop date)
     # Throws: nothing
     # Notes: The stop date is midnight today, while the start date is midnight 'windowSize' days before.
-    #    This will not get papers for today, but for the 'windowSize' days preceding today.
     
     if len(sys.argv) > 1:
         if len(sys.argv) != 3:
