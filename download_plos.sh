@@ -26,7 +26,7 @@ touch $LOG
 
 date | tee -a ${LOG}
 
-# Run the downloader script for default timeframe
+# Run the downloader script for default timeframe (passing in dates if specified)
 
 ./download_plos.py $1 $2 | tee -a ${LOG}
 
