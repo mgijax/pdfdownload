@@ -187,7 +187,7 @@ if __name__ == '__main__':
     for ref in papers:
         print 
         print ref['id']
-        print '%s, volume %s, issue %s' % (ref['journal'], ref['volume'], ref['issue'])
+        print '%s, volume %s, issue %s, published %s' % (ref['journal'], ref['volume'], ref['issue'], ref['publication_date'][:10])
         print '"%s"' % ref['title']
 
     print '-' * 40
