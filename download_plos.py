@@ -17,7 +17,7 @@ sys.path.insert(0, '/usr/local/mgi/live/lib/python')
 USAGE = '''Usage: %s [yyyy-mm-dd] [yyyy-mm-dd]
     The default behavior (no parameters) is to get files for the sixty days
     preceding today.  If you specify dates, you must specify both.  The first
-    is the start date (inclusive) and the second is the end date (exclusive).
+    is the start date (inclusive) and the second is the end date (inclusive).
     That is, searching from 2001-01-01 to 2001-01-03 will return papers with
     a publication date of 2001-01-01 and 2001-01-02.
 ''' % sys.argv[0]
@@ -53,7 +53,7 @@ journals = [ 'PLOS ONE', 'PLOS Genetics', 'PLOS Biology', 'PLOS Pathogens']
 baseUrl = 'http://api.plos.org/search?q=journal:"%s" AND (abstract:"mice" OR body:"mice" OR title:"mice") ' + \
     'AND publication_date:[%sT00:00:00Z TO %sT00:00:00Z] AND issue:[* TO *] AND volume:[* TO *]' + \
     '&fl=id,journal,title,volume,issue,publication_date&wt=json&start=%d&rows=%d'
-
+    
 # handles timing issues for PLOS requests, so we can stay within their usage caps
 governor = HttpRequestGovernor.HttpRequestGovernor()
 
@@ -119,7 +119,7 @@ def getPapersForJournal(journal, startDate, stopDate):
 
     global governor
     
-    startIndex = 1          # start the next set of results at what index?
+    startIndex = 0          # start the next set of results at what index?
     rowCount = 100          # max number of rows returned for each iteration
     totalCount = 9999       # number of matching records (just start big, then adjust)
     
