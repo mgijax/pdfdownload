@@ -184,10 +184,6 @@ if __name__ == '__main__':
 
     print '-' * 40
     print 'Missed papers that are outside the PLOS downloader\'s search window: (%d papers)' % len(papers)
-    for ref in papers:
-        print 
-        print ref['id']
-        print '%s, volume %s, issue %s, published %s' % (ref['journal'], ref['volume'], ref['issue'], ref['publication_date'][:10])
-        print '"%s"' % ref['title']
+    print '(%s)' % ') OR ('.join(map(lambda x : x['id'], papers))
 
     print '-' * 40
