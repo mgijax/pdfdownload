@@ -14,12 +14,13 @@
 import sys
 sys.path.insert(0, '/usr/local/mgi/live/lib/python')
 
-USAGE = '''Usage: %s [yyyy-mm-dd] [yyyy-mm-dd]
+USAGE = '''Usage: %s [yyyy-mm-dd] [yyyy-mm-dd] ['journal name']
     The default behavior (no parameters) is to get files for the sixty days
-    preceding today.  If you specify dates, you must specify both.  The first
-    is the start date (inclusive) and the second is the end date (inclusive).
-    That is, searching from 2001-01-01 to 2001-01-03 will return papers with
-    a publication date of 2001-01-01 and 2001-01-03.
+    preceding today for all four PLOS journals.  If you specify dates, you
+    must specify both.  The first is the start date and the second is the
+    end date, both inclusive.  If you specify a journal name, it is case-
+    sensitive, should be enclosed in quotes, and must be one of the four PLOS
+    journals for which we usually search.
 ''' % sys.argv[0]
 
 import os 
@@ -52,7 +53,7 @@ journals = [ 'PLOS ONE', 'PLOS Genetics', 'PLOS Biology', 'PLOS Pathogens']
 # max number of rows to return)
 baseUrl = 'http://api.plos.org/search?q=journal:"%s" AND (abstract:"mice" OR body:"mice" OR title:"mice") ' + \
     'AND publication_date:[%sT00:00:00Z TO %sT00:00:00Z] AND issue:[* TO *] AND volume:[* TO *]' + \
-    '&fl=id,journal,title,volume,issue,publication_date&wt=json&start=%d&rows=%d'
+    '&fl=id,journal,title,volume,issue,publication_date&wt=json&start=%d&rows=%d&api_key=TBuoBVKTxqZHU_gBshiM'
     
 # handles timing issues for PLOS requests, so we can stay within their usage caps
 governor = HttpRequestGovernor.HttpRequestGovernor()
@@ -73,12 +74,25 @@ def bailout (error, showUsage = False):
     sys.stderr.write('Error: %s\n' % error)
     sys.exit(1)
     
-def getDates():
+def parseParameters():
     # Purpose: get the start and stop dates for the download
     # Returns: (start date, stop date)
+    # Effects: modifies global 'journals' if a single journal is specified on the command-line
     # Throws: nothing
     # Notes: The stop date is midnight today, while the start date is midnight 'windowSize' days before.
     
+    global journals
+    
+    # if the user specified a single journal to search, strip it from the parameters and update the global
+    # list of journals to process
+    
+    if sys.argv[-1] in journals:
+        journals = [ sys.argv[-1] ]
+        sys.argv = sys.argv[:-1]
+
+    elif sys.argv[-1] == '':            # empty string comes in if no journal specified; remove it
+        sys.argv = sys.argv[:-1]
+        
     if len(sys.argv) > 1:
         if len(sys.argv) != 3:
             bailout('Wrong number of parameters', True)
@@ -230,7 +244,7 @@ def filterPapers(papers):
 ###--- main program ---###
 
 if __name__ == '__main__':
-    startDate, stopDate = getDates()
+    startDate, stopDate = parseParameters()
     papers = filterPapers(getPapers(startDate, stopDate))
     pmcIDs = getPMCIDs(papers)
     urls = getUrls(pmcIDs)
