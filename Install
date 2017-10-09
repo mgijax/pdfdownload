@@ -1,0 +1,17 @@
+#!/bin/sh
+
+#
+# Install script for the PDF download product (pdfdownload)
+#
+# Usage:  Install
+#
+cd `dirname $0`
+. ./Configuration
+
+#
+# Make sure the log directory exists.
+#
+if [ ! -d ${PDFDOWNLOADLOGDIR} ]
+then
+    mkdir -p ${PDFDOWNLOADLOGDIR}
+fi
