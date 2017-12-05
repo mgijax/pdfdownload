@@ -3,14 +3,18 @@
 # Name: download_plos.py
 # Purpose: Download PDFs from PLOS for the preceding sixty days.  This includes papers where:
 #   1. title, abstract, or body contain "mice"
-#   2. journal is PLOS One, PLOS Genetics, PLOS Biology, or PLOS Pathogens
+#   2. journal is PLOS One, PLOS Genetics, PLOS Biology, (PLOS Pathogens removed 12/5 TR12737)
 #   3. issue and journal are non-null (to avoid uncorrected proofs)
 #   4. the DOI ID is not already in MGI
 # Notes: Destination folder of PDFs is pulled from configuration.  There is some lag time
 #    between when papers are published and when they are available for download, and that
 #    lag appears to be non-standard, so we allow a two month cushion in hopes to catch
 #    all relevant papers eventually.
-
+#
+# Implementation history
+#
+# 12/5/17 - sc
+#	TR12737 removed PLOS Pathogens
 import sys
 sys.path.insert(0, '/usr/local/mgi/live/lib/python')
 
@@ -47,7 +51,7 @@ caches.initialize(os.environ['MGI_PUBLICUSER'], os.environ['MGI_PUBLICPASSWORD']
 profiler = Profiler.Profiler()
 
 # which PLOS journals do we want to search?
-journals = [ 'PLOS ONE', 'PLOS Genetics', 'PLOS Biology', 'PLOS Pathogens']
+journals = [ 'PLOS ONE', 'PLOS Genetics', 'PLOS Biology']
 
 # URL for contacting PLOS to find articles (plug in journal name, start date, end date, start row, and 
 # max number of rows to return)
