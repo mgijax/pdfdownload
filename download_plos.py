@@ -3,7 +3,7 @@
 # Name: download_plos.py
 # Purpose: Download PDFs from PLOS for the preceding sixty days.  This includes papers where:
 #   1. title, abstract, or body contain "mice"
-#   2. journal is PLOS One, PLOS Genetics, PLOS Biology, (PLOS Pathogens removed 12/5 TR12737)
+#   2. journal is PLOS One, PLOS Genetics, PLOS Biology
 #   3. issue and journal are non-null (to avoid uncorrected proofs)
 #   4. the DOI ID is not already in MGI
 # Notes: Destination folder of PDFs is pulled from configuration.  There is some lag time

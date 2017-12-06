@@ -4,9 +4,14 @@
 # Purpose: Identify DOI IDs from PLOS that have passed our sixty day window and need manual attention.
 #   This includes papers we would normally like to bring in, because they have these attributes:
 #   1. title, abstract, or body contain "mice"
-#   2. journal is PLOS One, PLOS Genetics, PLOS Biology, or PLOS Pathogens
+#   2. journal is PLOS One, PLOS Genetics, PLOS Biology
 #   3. issue and journal are non-null (to avoid uncorrected proofs)
 #   4. the DOI ID is not already in MGI
+#
+# Implementation history
+#
+# 12/5/17 - sc
+#       TR12737 removed PLOS Pathogens
 
 import sys
 sys.path.insert(0, '/usr/local/mgi/live/lib/python')
@@ -44,7 +49,7 @@ caches.initialize(os.environ['MGI_PUBLICUSER'], os.environ['MGI_PUBLICPASSWORD']
 profiler = Profiler.Profiler()
 
 # which PLOS journals do we want to search?
-journals = [ 'PLOS ONE', 'PLOS Genetics', 'PLOS Biology', 'PLOS Pathogens']
+journals = [ 'PLOS ONE', 'PLOS Genetics', 'PLOS Biology']
 
 # URL for contacting PLOS to find articles (plug in journal name, start date, end date, start row, and 
 # max number of rows to return)
