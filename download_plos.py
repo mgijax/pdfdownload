@@ -1,9 +1,9 @@
 #!/usr/local/bin/python
 
 # Name: download_plos.py
-# Purpose: Download PDFs from PLOS for the preceding sixty days.  This includes papers where:
+# Purpose: Download PDFs from PubMed Central for the preceding sixty days.  This includes papers where:
 #   1. title, abstract, or body contain "mice"
-#   2. journal is PLOS One, PLOS Genetics, PLOS Biology
+#   2. journal is one of those specified in the 'journals' global variable
 #   3. issue and journal are non-null (to avoid uncorrected proofs)
 #   4. the DOI ID is not already in MGI
 # Notes: Destination folder of PDFs is pulled from configuration.  There is some lag time
@@ -13,17 +13,22 @@
 #
 # Implementation history
 #
+# 10/23/18 - jsb
+#    updated to pull in six new journals' papers and to handle PLOS papers the same way
+#    (rather than querying the PLOS site itself)
 # 12/5/17 - sc
 #	TR12737 removed PLOS Pathogens
+
 import sys
 sys.path.insert(0, '/usr/local/mgi/live/lib/python')
+sys.path.insert(0, './lib/python')
 
 USAGE = '''Usage: %s [yyyy-mm-dd] [yyyy-mm-dd] ['journal name']
     The default behavior (no parameters) is to get files for the sixty days
-    preceding today for all four PLOS journals.  If you specify dates, you
+    preceding today for all nine allowed journals.  If you specify dates, you
     must specify both.  The first is the start date and the second is the
     end date, both inclusive.  If you specify a journal name, it is case-
-    sensitive, should be enclosed in quotes, and must be one of the four PLOS
+    sensitive, should be enclosed in quotes, and must be one of the 
     journals for which we usually search.
 ''' % sys.argv[0]
 
@@ -36,6 +41,7 @@ import HttpRequestGovernor
 import Profiler
 import PubMedCentralAgent
 import caches
+import backPopulate
 
 ###--- setup ---###
 
@@ -50,8 +56,9 @@ caches.initialize(os.environ['MGI_PUBLICUSER'], os.environ['MGI_PUBLICPASSWORD']
 
 profiler = Profiler.Profiler()
 
-# which PLOS journals do we want to search?
-journals = [ 'PLOS ONE', 'PLOS Genetics', 'PLOS Biology']
+# which journals do we want to search?
+journals = [ 'Aging Cell', 'Cilia', 'Dis Model Mech', 'Nucleic Acids Res', 'Cell Death Differ', 'J Lipid Res',
+    'PLOS ONE', 'PLOS Genetics', 'PLOS Biology']
 
 # URL for contacting PLOS to find articles (plug in journal name, start date, end date, start row, and 
 # max number of rows to return)
@@ -62,7 +69,7 @@ baseUrl = 'http://api.plos.org/search?q=journal:"%s" AND (abstract:"mice" OR bod
 # handles timing issues for PLOS requests, so we can stay within their usage caps
 governor = HttpRequestGovernor.HttpRequestGovernor()
 
-# number of days to look back to try to find articles (due to delay in transfer from PLOS to PubMed Central)
+# number of days to look back to try to find articles (due to delay in transfer from journals to PubMed Central)
 windowSize = int(os.environ['WINDOW_SIZE'])
 
 # list of strings, each of which is an error to report
@@ -132,7 +139,7 @@ def getUrl(journal, startDate, stopDate, startIndex, rowCount):
 def getPapersForJournal(journal, startDate, stopDate):
     # Purpose: get the papers for 'journal' published between the two dates
     # Returns: list of dictionaries, each of which represents a single paper
-    # Throws: Exception if there are problems with retrieving the data from PLOS
+    # Throws: Exception if there are problems with retrieving the data
 
     global governor
     
@@ -161,7 +168,7 @@ def getPapersForJournal(journal, startDate, stopDate):
 def getPapers(startDate, stopDate):
     # Purpose: get the papers for all the monitored journals published between the two dates
     # Returns: list of dictionaries, each of which represents a single paper
-    # Throws: Exception if there are problems with retrieving the data from PLOS
+    # Throws: Exception if there are problems with retrieving the data
 
     papers = []
     for journal in journals:
@@ -249,19 +256,29 @@ def filterPapers(papers):
 
 if __name__ == '__main__':
     startDate, stopDate = parseParameters()
-    papers = filterPapers(getPapers(startDate, stopDate))
-    pmcIDs = getPMCIDs(papers)
-    urls = getUrls(pmcIDs)
-    downloadUrls(urls)
+    backPopulate.setProfiler(profiler)
+    
+    config = backPopulate.Config()
+    config.setBasePath(os.environ['PDFDIR'])
+    config.setJournals(journals)
+    config.setDateRange('%s:%s' % (startDate.replace('-', '/'), stopDate.replace('-', '/')))
+    config.setVerbose(False)
+    
+    backPopulate.process(config)
+    
+#    papers = filterPapers(getPapers(startDate, stopDate))
+#    pmcIDs = getPMCIDs(papers)
+#    urls = getUrls(pmcIDs)
+#    downloadUrls(urls)
 
     print '-' * 40
     print 'Profiler Report'
     profiler.write()
 
-    print '-' * 40
-    print 'PLOS Governor Report'
-    for line in governor.getStatistics():
-        print ' - %s' % line
+#    print '-' * 40
+#    print 'PLOS Governor Report'
+#    for line in governor.getStatistics():
+#        print ' - %s' % line
 
     print '-' * 40
     print 'Non-Fatal Errors (missing IDs and URLs will generally be picked up in future runs)'

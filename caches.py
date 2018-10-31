@@ -64,6 +64,11 @@ class IDCache:
                 subset.append(accID)
 
         return subset
+    
+    def contains(self, accID):
+        # return True if accID is in the cache, False if not
+
+        return accID in self.cache
 
 class DOICache (IDCache):
     # Is: an IDCache of all DOI IDs that are currently in the database
@@ -73,6 +78,21 @@ class DOICache (IDCache):
             from acc_accession
             where _MGIType_key = 1
                 and _LogicalDB_key = 65'''
+
+        for row in pg_db.sql(cmd, 'auto'):
+            self.cache.add(row['accID'])
+        return
+    
+class PubMedWithPDF (IDCache):
+    # Is: an IDCache of PubMed IDs for which we have PDFs already
+    
+    def populateCache(self):
+        cmd = '''select a.accID
+            from bib_workflow_data r, acc_accession a
+            where r._Refs_key = a._Object_key
+                and a._MGIType_key = 1
+                and r.hasPDF = 1
+                and a._LogicalDB_key = 29'''
 
         for row in pg_db.sql(cmd, 'auto'):
             self.cache.add(row['accID'])

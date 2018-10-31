@@ -6,8 +6,12 @@
 #	than a single PDF file), download it, unpackage it, then find and
 #	move the PDF file from within it.
 # Return Code: 0 if all is well, non-zero if not
+# jak, 8/20/2018, adapted from
+#   https://github.com/mgijax/pdfdownload/blob/master/download_plos.py
+#   changed to take a 3rd param for the PDF file name and to work on MacOS
+#   (have not tested the changes on linux)
 
-USAGE="Usage: $0 <quoted URL> <directory>
+USAGE="Usage: $0 <quoted URL> <directory> <final PDF filename>
 "
 
 ###--- functions ---###
@@ -26,19 +30,20 @@ fail () {
 #    $2 - error message to echo if $1 is non-zero
 exitIfFailed () {
 	if [ $1 -ne 0 ]; then
-		fail $2
+		fail "Exit code: $1 Msg: $2"
 	fi
 }
 
 ###--- main script ---###
 
-if [ $# -ne 2 ]; then
+if [ $# -ne 3 ]; then
 	echo $USAGE
 	fail "bad parameters"
 fi
 
-filename=`basename $1`		# name of file to be downloaded
+filename=`basename $1`		# basename of file to be downloaded
 directory=$2			# destination directory for file
+finalPDFname=$3			# basename of the downloaded PDF
 
 if [ ! -d ${directory} ]; then
 	echo $USAGE
@@ -47,11 +52,15 @@ fi
 
 # download the file into the directory
 
-curl "$1" > ${directory}/${filename}
+/usr/bin/curl $1 > ${directory}/${filename}
 exitIfFailed $? "curl failed"
 
 # If we downloaded a tarred, gzipped file (rather than a PDF), there's more
 # work to do...
+
+# "Find Shortest" filename alias. Sorts by filename length, shortest 1st
+#  this works on MacOS
+#alias fs="awk '{x = length(\$0); print x, \$0}' | sort -n | sed 's/^[0-9][0-9]* //'"
 
 suffix=`echo "${filename##*.}"`
 if [ "${suffix}" == "gz" ]; then
@@ -61,28 +70,41 @@ if [ "${suffix}" == "gz" ]; then
 	# 4. move the PDF to the correct directory
 	# 5. remove the now-empty directory and the tar file
 
-	gunzip ${directory}/${filename}
+	gunzip -f ${directory}/${filename}
 	exitIfFailed $? "failed to unzip file"
 
 	# convert the filename from the gzipped name to just the *tar name
 	filename=`echo ${filename} | sed 's/.gz$//'`
 
-	# assume the primary PDF (as opposed to supplements) will sort first
-	pdfPath=`tar --list -f ${directory}/${filename} | grep 'pdf$' | sort -u | head -1`
+	cwd=`pwd`
+	# Finding PDF article filename in the tar is complicated as many
+	#    supp data files are also PDFs
+	# The logic for finding the article PDF is in find_pdf_in_tar.py
+	pdfPath=`tar tvf ${directory}/${filename} | ${cwd}/find_pdf_in_tar.py`
 
 	if [ "${pdfPath}" != "" ]; then
-		tar -x ${pdfPath} -f ${directory}/${filename}
+		# Linux: tar -x ${pdfPath} -f ${directory}/${filename}
+		#     This doesn't work in MacOS tar
+		# This works for both:
+		#     tar -xf filename ${pdfPath}
+		cd ${directory}		# so we do all unpacking in $dir not .
+		tar -xf ${filename} ${pdfPath}
 		exitIfFailed $? "failed to pull ${pdfPath} from gzip file"
 
-		mv ${pdfPath} ${directory}
+		mv ${pdfPath} ${finalPDFname}
 		exitIfFailed $? "failed to move PDF file into directory"
 
 		rm -rf `dirname ${pdfPath}`
 		exitIfFailed $? "failed to remove empty directory"
 
-		rm ${directory}/${filename}
+		rm ${filename}
 		exitIfFailed $? "failed to remove tar file"
 	else
 		fail "no PDF found in gzip file"
 	fi
+elif [ "$suffix" == "pdf" -o "$suffix" == "PDF" ]; then 
+    mv ${directory}/${filename} ${directory}/${finalPDFname}
+    exitIfFailed $? "failed to rename downloaded PDF"
+else
+    fail "downloaded file has bad file extension"
 fi
