@@ -35,11 +35,6 @@ USAGE = '''Usage: %s [yyyy-mm-dd] [yyyy-mm-dd] ['journal name']
 import os 
 import re
 import time
-import urllib
-import Dispatcher
-import HttpRequestGovernor
-import Profiler
-import PubMedCentralAgent
 import caches
 import backPopulate
 
@@ -54,26 +49,12 @@ caches.initialize(os.environ['MGI_PUBLICUSER'], os.environ['MGI_PUBLICPASSWORD']
 
 ###--- Globals ---###
 
-profiler = Profiler.Profiler()
-
 # which journals do we want to search?
 journals = [ 'Aging Cell', 'Cilia', 'Dis Model Mech', 'Nucleic Acids Res', 'Cell Death Differ', 'J Lipid Res',
     'PLOS ONE', 'PLOS Genetics', 'PLOS Biology']
 
-# URL for contacting PLOS to find articles (plug in journal name, start date, end date, start row, and 
-# max number of rows to return)
-baseUrl = 'http://api.plos.org/search?q=journal:"%s" AND (abstract:"mice" OR body:"mice" OR title:"mice") ' + \
-    'AND publication_date:[%sT00:00:00Z TO %sT00:00:00Z] AND issue:[* TO *] AND volume:[* TO *]' + \
-    '&fl=id,journal,title,volume,issue,publication_date&wt=json&start=%d&rows=%d&api_key=TBuoBVKTxqZHU_gBshiM'
-    
-# handles timing issues for PLOS requests, so we can stay within their usage caps
-governor = HttpRequestGovernor.HttpRequestGovernor()
-
 # number of days to look back to try to find articles (due to delay in transfer from journals to PubMed Central)
 windowSize = int(os.environ['WINDOW_SIZE'])
-
-# list of strings, each of which is an error to report
-errors = []
 
 ###--- functions ---###
 
@@ -122,141 +103,12 @@ def parseParameters():
         startDate = time.strftime("%Y-%m-%d", time.localtime(time.time() - windowSize * 24 * 60 * 60))
         stopDate =  time.strftime("%Y-%m-%d", time.localtime(time.time()))
 
-    profiler.stamp('dates: %s to %s' % (startDate, stopDate))
     return (startDate, stopDate)
 
-def getUrl(journal, startDate, stopDate, startIndex, rowCount):
-    # Purpose: get a properly encoded version of 'baseUrl', filling in the given parameters
-    # Returns: string URL
-    # Throws: nothing
-    
-    url = baseUrl % (journal, startDate, stopDate, startIndex, rowCount)
-    
-    # I don't use urllib.quote() here, because I don't want the whole string to have useful
-    # bits (like = or &) replaced.
-    return url.replace(' ', '%20').replace('[', '%5b').replace(']', '%5d')
-
-def getPapersForJournal(journal, startDate, stopDate):
-    # Purpose: get the papers for 'journal' published between the two dates
-    # Returns: list of dictionaries, each of which represents a single paper
-    # Throws: Exception if there are problems with retrieving the data
-
-    global governor
-    
-    startIndex = 0          # start the next set of results at what index?
-    rowCount = 100          # max number of rows returned for each iteration
-    totalCount = 9999       # number of matching records (just start big, then adjust)
-    
-    docs = []               # list of dictionaries, each representing a single paper
-    
-    while (startIndex <= totalCount):
-        resultString = governor.get(getUrl(journal, startDate, stopDate, startIndex, rowCount))
-
-        # This is less than ideal, from a security perspective.  We ought to be using the json module for
-        # decoding this string, but that's not available until Python 2.7.  Since we know the data source,
-        # and it's not arbitrary user-entered data, it's probably okay for now.
-        results = eval(resultString)
-        
-        totalCount = results['response']['numFound']
-        docs = docs + results['response']['docs']
-        
-        startIndex = startIndex + rowCount
-        
-    profiler.stamp('%d papers from %s' % (len(docs), journal))
-    return docs
-
-def getPapers(startDate, stopDate):
-    # Purpose: get the papers for all the monitored journals published between the two dates
-    # Returns: list of dictionaries, each of which represents a single paper
-    # Throws: Exception if there are problems with retrieving the data
-
-    papers = []
-    for journal in journals:
-        papers = papers + getPapersForJournal(journal, startDate, stopDate)
-        
-    profiler.stamp('%d papers in all' % len(papers))
-    return papers
-
-def reportMissing(map, missingType):
-    # Purpose: report any keys of 'map' that have None associated as a value
-    global errors
-
-    keys = map.keys()
-    keys.sort()
-    
-    ct = 0      # count of missing items
-    
-    for key in keys:
-        if not map[key]:
-            errors.append('Missing %s for %s' % (missingType, key))
-            del map[key]
-            ct = ct + 1
-
-    profiler.stamp('%d missing %ss, got %d' % (ct, missingType, len(map)))
-    return
-    
-def getPMCIDs(papers):
-    # Purpose: get a list of the PMC IDs that correspond to the given set of 'papers'
-    # Returns: list of strings (PMC IDs)
-    # Throws: Exception if there are problems retrieving the IDs from PubMed Central
-    
-    doiIDs = map(lambda x: x['id'], papers)
-    idConverter = PubMedCentralAgent.IDConverterAgent()
-    pmcIDs = idConverter.getPMCIDs(doiIDs)
-
-    reportMissing(pmcIDs, 'PMC ID')
-    return pmcIDs.values()
-
-def getUrls(pmcIDs):
-    # Purpose: get a list of the URLs needed to download PDFs for the papers identified
-    #    by their PMC IDs
-    # Returns: list of strings (URLs)
-    # Throws: Exception if there are problems returning the URLs from PubMed Central
-    
-    pdfLookup = PubMedCentralAgent.PDFLookupAgent()
-    urls = pdfLookup.getUrls(pmcIDs)
-    
-    reportMissing(urls, 'URL')
-    return urls.values()
-
-def downloadUrls(urls):
-    # Purpose: download the PDF files identified by 'urls'
-    # Returns: nothing
-    # Throws: Exception if there are problems returning the URLs from PubMed Central
-
-    dispatcher = Dispatcher.Dispatcher()
-    ids = []
-    for url in urls:
-        ids.append(dispatcher.schedule([ './download_pdf.sh', url, os.environ['PDFDIR'] ]))
-
-    dispatcher.wait()
-    profiler.stamp('Finished downloading %d files' % len(urls))
-    return
-
-def filterPapers(papers):
-    # Purpose: eliminate from 'papers' any that are already in the database (based on DOI ID)
-    # Returns: list of dictionaries (subset of 'papers')
-    # Throws: Exception if there are problems reading cache of IDs from database
-    
-    doiCache = caches.DOICache()
-    profiler.stamp('Cached %d DOI IDs from db' % len(doiCache))
-
-    ct = 0              # count of papers already in database
-    i = len(papers)
-    while i > 0:
-        i = i - 1
-        if papers[i]['id'] in doiCache:
-            del papers[i]
-            ct = ct + 1
-            
-    profiler.stamp('Skipped %d papers already in db' % ct)
-    return papers 
-    
 ###--- main program ---###
 
 if __name__ == '__main__':
     startDate, stopDate = parseParameters()
-    backPopulate.setProfiler(profiler)
     
     config = backPopulate.Config()
     config.setBasePath(os.environ['PDFDIR'])
@@ -265,24 +117,3 @@ if __name__ == '__main__':
     config.setVerbose(False)
     
     backPopulate.process(config)
-    
-#    papers = filterPapers(getPapers(startDate, stopDate))
-#    pmcIDs = getPMCIDs(papers)
-#    urls = getUrls(pmcIDs)
-#    downloadUrls(urls)
-
-    print '-' * 40
-    print 'Profiler Report'
-    profiler.write()
-
-#    print '-' * 40
-#    print 'PLOS Governor Report'
-#    for line in governor.getStatistics():
-#        print ' - %s' % line
-
-    print '-' * 40
-    print 'Non-Fatal Errors (missing IDs and URLs will generally be picked up in future runs)'
-    for line in errors:
-        print ' - %s' % line
-
-    print '-' * 40

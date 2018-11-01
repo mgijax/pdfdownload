@@ -1,9 +1,10 @@
-# copied from autolittriage product, converted from script to library -- jsb, 10/23/2018
+# copied from autolittriage product, converted from script to library, updated
+# to integrate with routine downloader -- jsb, 10/23/2018
 
 """ Author:  Jim, August 2018
     For specified journals, and other params (volume, issue, date range)
-	get PDFs (and/or .xml) from PMC Eutils and Open Access (OA) search.
-    Populate output directories with PDFs and .xml files
+	get PDFs from PMC Eutils and Open Access (OA) search.
+    Populate output directories with PDFs
 
     Output: Status/summary messages to stdout
 	    Populate output directories, one subdir for each journal processed.
@@ -63,13 +64,15 @@ OPEN_ACCESS_CLAUSE = 'open access[filter]'
 # Volumes earlier than 2016 should be up to date
 DEFAULT_DATERANGE = '2010/01/01:2016/12/31'
 
+# defines what config info is expected by this module -- Construct one of these,
+# populate it, and pass it into the process() function.
 class Config:
     def __init__ (self):
         self.basePath = '.'
         self.journals = []
         self.dateRange = DEFAULT_DATERANGE
         self.pmcID = None
-        self.miceOnly = False
+        self.miceOnly = True
         self.maxFiles = 0
         self.noWrite = False
         self.verbose = True
@@ -95,9 +98,9 @@ class Config:
         self.pmcID = pmcID
         return
     
-    def setNonMice(self, miceOnly):
+    def setNonMice(self, nonMice):
         # include non-mice papers in searches (True) or not (False)
-        self.miceOnly = miceOnly
+        self.miceOnly = not nonMice
         return
     
     def setMaxFiles(self, maxFiles):
@@ -164,7 +167,6 @@ def process(
 	print r.getReport()
 	numPdfs += r.getNumMatching()
 
-    print
     print "Total PDFs Written: %d" %  numPdfs
     progress( 'Total time: %8.2f seconds\n' % (time.time() - startTime) )
     return
@@ -193,9 +195,7 @@ class PMCsearchReporter (object):
 	self.maxFiles = maxFiles
 
 	self.nResultsProcessed = 0	
-	self.nResultsGotText = 0	# num extracted text files written
 	self.nResultsGotPdf = 0		# num PDF files written
-	self.nResultsGotXml = 0		# num XML files written
 
 	self.skippedArticles = {}	# dict of skipped because wrong type
 					# {"new type name" : [ pmIDs w/ type] }
@@ -207,7 +207,6 @@ class PMCsearchReporter (object):
 	self.nWithNewTypes = 0		# num articles w/ new types
 
 	self.noPdf = []			# [pmIDs] w/ no PDF we could find
-	self.noXmlBody = []		# [pmIDs] w/ no <body> in XML
 	self.mgiPubmedIds=[]		# [pmIDs] skipped since in MGI
 	self.noPubmedIds=[]		# [pmcIDs] skipped since no PMID
     # ---------------------
@@ -230,14 +229,6 @@ class PMCsearchReporter (object):
 	    self.newTypes[t] = []
 	self.newTypes[t].append(article.pmid)
 
-    def gotText(self, article):
-	""" Record that we got/wrote a text file for this article """
-	self.nResultsGotText += 1
-
-    def gotXml(self, article):
-	""" Record that we got/wrote a XML file for this article """
-	self.nResultsGotXml += 1
-
     def gotPdf(self, article):
 	""" Record that we got/wrote a PDF file for this article """
 	self.nResultsGotPdf += 1
@@ -245,10 +236,6 @@ class PMCsearchReporter (object):
     def gotNoPdf(self, article):
 	""" couldn't get PDF url for this article """
 	self.noPdf.append(article.pmid)
-
-    def gotNoBody(self, article):
-	""" no <body> tag for this article - hence, no text """
-	self.noXmlBody.append(article.pmid)
 
     def gotNoPmid(self, article):
 	""" couldn't get PMID for this article """
@@ -272,8 +259,6 @@ class PMCsearchReporter (object):
 	if self.totalSearchCount == 0: return output
 
 	output += "%6d maxFiles\n" % self.maxFiles
-	output += "%6d .txt files written\n" % self.nResultsGotText
-	output += "%6d .xml files written\n" % self.nResultsGotXml
 	output += "%6d .pdf files written\n" % self.nResultsGotPdf
 
 	if self.nSkipped > 0:
@@ -301,9 +286,6 @@ class PMCsearchReporter (object):
 	    output += "%6d Articles w/ no PDFs:\n" % len(self.noPdf)
 	    output += '\tPMID' + ', '.join( map(str, self.noPdf[:6]) ) + '\n'
 
-	if len(self.noXmlBody) > 0:
-	    output += "%6d Articles w/ no body:\n" % len(self.noXmlBody)
-	    output += '\tPMID' + ', '.join( map(str, self.noXmlBody[:6]) )+ '\n'
 	return output
 
     def getReportHeader(self):
@@ -314,8 +296,6 @@ class PMCsearchReporter (object):
 class PMCfileRangler (object):
     """ Knows how to query PMC and download PDFs from PMC OA FTP site
 	Stores files in directories named by journal name.
-	Also supports downloading full text XML files and text that PMC
-	has extracted. But we are not using those for now (just PDFs)
     """
     # Article Types we know about, ==True if we want these articles,
     #  ==False if we don't
@@ -343,22 +323,15 @@ class PMCfileRangler (object):
 		urlReader=surl.ThrottledURLReader(seconds=0.2),
 		verbose=False,
 		writeFiles=True,	# =False to not write any files/dirs
-		getXml=False,		# =True to write xml output for each
-					#   matching article (pmid.xml)
-		getPdf=True,		# =True to write PDF files for each
+		getPdf=True		# =True to write PDF files for each
 					#   matching article that has PDF
 					#   (pmid.pdf)
-		getText=False		# =True to write extracted text file
-					#   for each matching article that
-					#   has text in the xml output: pmid.txt
 		):
         self.basePath = basePath
         self.urlReader = urlReader
         self.verbose = verbose
         self.writeFiles = writeFiles
-        self.getXml = getXml
         self.getPdf = getPdf
-        self.getText = getText
         self.pubmedWithPDF = caches.PubMedWithPDF()
         self.journalSummary = {}
         self.curOutputDir = ''
@@ -389,7 +362,7 @@ class PMCfileRangler (object):
 		count, resultsE, results = self._runSearch(journal,
 						    searchParams, maxFiles)
 		searchEnd = time.time()
-		progress('%d results.\n - Search time: %8.2f\n' % \
+		progress('%d results.\n - Search time: %9.2f\n' % \
 				    (count, searchEnd-startTime))
 
 		self.curReporter = PMCsearchReporter(journal, searchParams,
@@ -398,7 +371,7 @@ class PMCfileRangler (object):
 
 		self._processResults(journal, resultsE, results)
 		processEnd = time.time()
-		progress('\n - Process time: %8.2f\n' % (processEnd-searchEnd))
+		progress(' - Process time: %8.2f\n' % (processEnd-searchEnd))
 
 	return self.reporters
     # ---------------------
@@ -461,8 +434,6 @@ class PMCfileRangler (object):
 
 	    # write files
 	    if self.getPdf:	self._queuePdfFile(art, artE)
-	    if self.getXml:  	self._writeXmlFile(art, artE)
-	    if self.getText:	self._writeTextFile(art, artE)
 	# To use dispatcher, would need to save PDF requests and submit them
 	#  to a batch PDF method
 	self._runPdfQueue()
@@ -513,48 +484,6 @@ class PMCfileRangler (object):
 	return
     # ---------------------
    
-    def _writeXmlFile(self, article, articleE):
-	""" write articleE element XML to a filename based on pubmed ID
-	"""
-	bodyE = articleE.find("body")
-	if bodyE == None:
-	    self.curReporter.gotNoBody(article)
-	    if self.verbose: progress('x')
-	if not self.writeFiles: return
-
-	fileName = 'PMC' + str(article.pmcid) + ".xml"
-        pathName = os.sep.join( [ self.curOutputDir, fileName ] )
-
-	with open(pathName, 'w') as fp:
-	    fp.write( ET.tostring(articleE, method='xml'))
-	    self.curReporter.gotXml(article)
-	    if self.verbose: progress('X')
-    # ---------------------
-   
-    def _writeTextFile(self, article, articleE):
-	""" generate text from articleE element and write it to a filename
-	    based on pubmed ID.
-	"""
-	bodyE = articleE.find("body")
-	if bodyE == None:
-	    self.curReporter.gotNoBody(article)
-	    if self.verbose: progress('t')
-	if not self.writeFiles: return
-
-	#fileName = PMID_FILE_PREFIX + str(article.pmid) + ".txt"
-	fileName = 'PMC' + str(article.pmcid) + ".txt"
-        pathName = os.sep.join( [ self.curOutputDir, fileName ] )
-
-	text = ''
-	for e in articleE.itertext():
-	    text += e
-	
-	with open(pathName, 'w') as fp:
-	    fp.write(removeNonAscii(text))
-	    self.curReporter.gotText(article)
-	    if self.verbose: progress('T')
-    # ---------------------
-
     def _wantArticle(self, article):
 	""" Return True if we want this article (for now, we want its type)
 	    Need to add check for already in MGD.
@@ -585,39 +514,6 @@ class PMCfileRangler (object):
             os.makedirs(self.curOutputDir)
     # ---------------------
 # --------------------------
-
-def getPdfUrl_grep(pmcid):
-    """ I TRIED THIS, BUT IT IS REALLY SLOW compared to using the api call
-	Return the Open Access URL (str) to the pdf or gzipped tar file
-	containing pdf for the given pmcid.
-	Return '' if there is no such file
-    """
-    oaPdfIndex = "oa_non_comm_use_pdf.txt"
-    oaTgzIndex = "oa_file_list.txt"
-    baseUrl = 'ftp://ftp.ncbi.nlm.nih.gov/pub/pmc/'
-
-    # build grep commands
-    findPdfCommand = "fgrep 'PMC%s' %s" % (str(pmcid), oaPdfIndex)
-    findTgzCommand = "fgrep 'PMC%s' %s" % (str(pmcid), oaTgzIndex)
-
-    # run to find ftp location of .pdf
-    stdout, stderr, retcode = runCommand.runCommand(findPdfCommand)
-
-    if retcode == 0:		# found the .pdf file location
-	parts = stdout.split('\t')
-	ftpPath = parts[0]
-    else:
-	# run to find ftp location of .tgz
-	stdout, stderr, retcode = runCommand.runCommand(findTgzCommand)
-	if retcode == 0:	# found the .tgz file location
-	    parts = stdout.split('\t')
-	    ftpPath = parts[0]
-	else:
-	    print "Cannot find ftp location for PMC%s" % str(pmcid)
-	    return ''
-    print "Ftp: %s" % ftpPath
-    return baseUrl + ftpPath
-# ---------------------
 
 def getPdfUrl(pmcid):
     """ Return the Open Access URL (str) to the pdf or gzipped tar file
@@ -704,25 +600,6 @@ def getOpenAccessPdf(linkUrl,   # URL to download from
 # --------------------------
 # helper routines
 # --------------------------
-
-def getTagStructure(e, n=2, indent=0, ):  # e is ElementTree element
-    """ return string showing n levels deep so we can get a high level view of
-	the element's structure
-    """
-    output = " " * indent + e.tag + str(e.attrib) + '\n'
-    if n == 0 or len(e) == 0: return output
-    for subE in e:
-	output += getTagStructure(subE, n-1, indent=indent+2,)
-    return output
-# --------------------------
-
-def removeNonAscii(text):
-    """ return a string with all the non-ascii characters in text replaced
-	by a space.
-	Gets rid of those nasty unicode characters.
-    """
-    return  ''.join([i if ord(i) < 128 else ' ' for i in text])
-# ---------------------
 
 def progress(s):
     ''' write some progress info'''
