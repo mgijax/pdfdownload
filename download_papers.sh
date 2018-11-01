@@ -1,6 +1,6 @@
 #!/usr/bin/sh
 
-# Usage:  download_plos.csh
+# Usage:  download_papers.csh
 #
 # History
 #
@@ -28,6 +28,6 @@ date | tee -a ${LOG}
 
 # Run the downloader script for default timeframe (passing in dates if specified)
 
-./download_plos.py $1 $2 "$3" | tee -a ${LOG}
+./download_papers.py $1 $2 "$3" | tee -a ${LOG}
 
 date | tee -a ${LOG}

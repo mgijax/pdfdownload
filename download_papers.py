@@ -1,6 +1,6 @@
 #!/usr/local/bin/python
 
-# Name: download_plos.py
+# Name: download_papers.py
 # Purpose: Download PDFs from PubMed Central for the preceding sixty days.  This includes papers where:
 #   1. title, abstract, or body contain "mice"
 #   2. journal is one of those specified in the 'journals' global variable
