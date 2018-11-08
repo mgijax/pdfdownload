@@ -24,6 +24,9 @@ class Element:
         self.attrib = tag.getAttributes()
         return
     
+    def __str__ (self):
+        return '<%s> %s' % (self.tag, self.attrib)
+    
     def addElement(self, element):
         self.children.append(element)
         return
@@ -43,11 +46,34 @@ class Element:
         return None
     
     def findall(self, tag):
-        subset = []
-        for child in self.children:
-            if child.tag == tag:
-                subset.append(child)
-        return subset
+        # strip off leading "current node" indicator, if present
+        if tag.startswith('./'):
+            tag = tag[2:]
+        if tag.startswith('/'):
+            tag = tag[1:]
+         
+        toExpand = [ self ]
+        for piece in tag.split('/'):
+            newList = []
+            
+            # If this is an attribute search, then filter the current set of 'toExpand'.
+            # Otherwise, replace the 'toExpand' set with children of those elements that have
+            # that tag name.
+            attributeMatch = ATTRIBUTE_SEARCH.search(piece)
+            if attributeMatch:
+                name, value = attributeMatch.groups()        # attribute name, attribute value
+                for el in toExpand:
+                    if (name in el.attrib) and (el.attrib[name] == value):
+                        newList.append(el)
+            
+            else:
+                # This part is not an attribute search, so it must be a tag search.  Check the children.
+                for el in toExpand:
+                    for child in el.children:
+                        if child.tag == piece:
+                            newList.append(child)
+            toExpand = newList 
+        return toExpand
 
 class Tag:
     Open = 'Open'       # opening tag -- expect a close to be forthcoming: "<foo>"
@@ -166,6 +192,10 @@ DOUBLE_QUOTE = '"'
 # group 1 is whether there's a slash after the opening angle bracket
 # group 2 is the name of the tag
 TAG_NAME = re.compile('[ \t\n]*<([/])?([A-Za-z_0-9\-\.]+)')
+
+# group 1 is name of the attribute
+# group 2 is the value sought for the attribute
+ATTRIBUTE_SEARCH = re.compile('\[@([A-Za-z0-9_\-\.]+)[^=]*=[ \t]*[\'"]([^\'"]+)[\'"]\]')
 
 ###--- functions ---###
 
@@ -304,6 +334,7 @@ if __name__ == '__main__':
     check(root.findall('country')[2].find('neighbor').attrib['name'] == 'Costa Rica', 'Wrong neighbor')
     check(root.find('country').find('neighbor').attrib['direction'] == 'E', 'Wrong direction')
     check(len(root.findall('country')[2].findall('neighbor')) == 2, 'Wrong number of neighbors')
+    check(len(root.findall('country/neighbor/[@direction="W"]')) == 2, 'Wrong number of western neighbors')
 
     if failures:
         raise Exception('%d test failures (see above)' % failures)
