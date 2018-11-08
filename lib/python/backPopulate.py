@@ -46,7 +46,8 @@ import os
 import time
 import simpleURLLib as surl
 import NCBIutilsLib as eulib
-import xml.etree.ElementTree as ET
+#import xml.etree.ElementTree as ET        replaced by XmlReader until Python 2.7
+import XmlReader as ET
 import runCommand
 import Dispatcher
 import caches

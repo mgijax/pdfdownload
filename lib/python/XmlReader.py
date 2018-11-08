@@ -245,13 +245,23 @@ def nextTag(s):
      
     return s, '', ''
 
+def stripComments(s):
+    start = s.find('<!--')
+    while start >= 0:
+        end = s.find('-->', start + 1)
+
+        if end >= 0:
+            s = s[:start] + s[end+3:]
+        start = s.find('<!--')
+    return s
+            
 def fromstring(s):
     # traverse 's' and populate needed Element objects.
     
     allElements = []        # list of all root-level elements
     openElements = Stack()  # has open Elements
 
-    interveningText, tagString, remainder = nextTag(s)
+    interveningText, tagString, remainder = nextTag(stripComments(s))
 
     while (tagString or remainder):
         if interveningText.strip() and not openElements.isEmpty():
@@ -260,7 +270,7 @@ def fromstring(s):
             openElements.push(parent)
             
         # need to skip blank lines and the initial XML version definition line
-        if tagString and (not tagString.startswith('<?xml')):
+        if tagString and (not tagString.startswith('<?')) and (not tagString.startswith('<!')):
 
             tag = Tag(tagString)
             if tag.getTagType() == Tag.Open:
@@ -269,6 +279,8 @@ def fromstring(s):
             elif tag.getTagType() == Tag.Close:
                 openElement = openElements.pop()
                 if openElement.tag != tag.getTagName():
+                    print openElement
+                    print tag
                     raise Exception('Mismatching open/close tags: (%s, %s)' % (openElement.tag, tag.getTagName()))
 
                 if openElements.isEmpty():

@@ -1,9 +1,8 @@
-#!/usr/bin/python2.7
+#!/usr/local/bin/python
 
 # copied from autolittriage product -- jsb, 10/23/2018
 
 import sys
-import argparse
 import re
 import os
 import os.path
@@ -23,22 +22,14 @@ import os.path
 # The log records which pdf was chosen and why.
 # This will give us a chance to see how well this works
 
-def parseCmdLine():
-    parser = argparse.ArgumentParser( \
-	description= \
-	'''output pdf file name that is the longest file in tar file
-	'''
-	)
-    parser.add_argument('--macos', dest='os', action='store', default='linux',
-	help="if running on MacOS (default is Linux)")
-
-    args = parser.parse_args()
-    return args
-
+macMode = False
+if len(sys.argv) > 1:
+    if sys.argv[1] == '--macos':        # optional command-line param to flag for Mac mode
+        macMode = True
+        
 ###################
 # initialize
 ###################
-args = parseCmdLine()
 
 if os.environ.has_key("FIND_PDF_LOG"):
     logFP = open(os.environ["FIND_PDF_LOG"], 'a')
@@ -47,7 +38,7 @@ else: logFP = None
 # for linux tar command:
 fileSizePart = 2		# which field in tar output has file len
 # for macos tar command:
-if args.os == 'macos':
+if macMode:
     fileSizePart = 4		# which field in tar output has file len
 
 maxPDFsize  = 0			# max size PDF seen so far
