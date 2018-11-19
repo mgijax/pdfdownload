@@ -77,8 +77,13 @@ class Config:
         self.maxFiles = 0
         self.noWrite = False
         self.verbose = True
+        self.noPdfFile = None       # path to which to write a file of IDs with no PDFs
         return
     
+    def setNoPdfFile(self, noPdfFile):
+        self.noPdfFile = noPdfFile
+        return
+
     def setBasePath(self, bp):
         # Dir to write to. Files are written to dir/journal.
         self.basePath = bp
@@ -170,7 +175,64 @@ def process(
 
     print "Total PDFs Written: %d" %  numPdfs
     progress( 'Total time: %8.2f seconds\n' % (time.time() - startTime) )
+
+    if args.noPdfFile:
+    #    try:
+        count = writeNoPdfFile(args.noPdfFile, reporters)
+        progress('Wrote %d IDs for articles missing PDFs to %s\n' % (count, args.noPdfFile))
+    #    except Exception, e:
+    #        raise Exception('Downloaded PDFs, but could not write list of missing PDFs to: %s (%s)' % (args.noPdfFile, e))
     return
+
+def today():
+    # today's date as YYYY/mm/dd
+    return time.strftime('%Y/%m/%d', time.localtime())
+    
+def writeNoPdfFile(filePath, reporters):
+    # open & write a file to 'filePath' containing the IDs for any articles where PDFs were missing
+    # (as collected in the reporters)
+    
+    pmTitle = 'PubMed ID'
+    pmcTitle = 'PMC ID'
+    dateTitle = 'Pub Date'
+    maxPmLength = len(pmTitle)      # max width of PubMed ID column
+    maxPmcLength = len(pmcTitle)    # max width of PubMed Central ID column
+    dateLength = len('2018/11/17')
+    
+    for reporter in reporters:
+        for (pmid, pmcid, date) in reporter.getIdsWithNoPdfs():
+            if pmid:
+                maxPmLength = max(maxPmLength, len(pmid))
+            if pmcid:
+                maxPmcLength = max(maxPmcLength, len(pmcid))
+                
+    # like '%-15s %-12s %s\n'
+    # (The - ensures left-alignment within the set number of characters.)
+    template = '%%-%ds %%-%ds %%s\n' % (maxPmcLength, maxPmLength)
+
+    fp = open(filePath, 'w')
+    fp.write('IDs for records with missing PDFs, found by pdfdownload product\n')
+    fp.write('As of: %s\n\n' % today())
+    
+    fp.write(template % (pmcTitle, pmTitle, dateTitle))
+    fp.write(template % ('-' * maxPmcLength, '-' * maxPmLength, '-' * dateLength))
+    
+    ct = 0
+    for reporter in reporters:
+        for (pmid, pmcid, date) in reporter.getIdsWithNoPdfs():
+            if not pmid:
+                pmid = '-'
+            if not pmcid:
+                pmcid = '-'
+            if not date:
+                date = '-'
+                
+            fp.write(template % (pmcid, pmid, date))
+            ct = ct + 1
+            
+    fp.close()
+    return ct
+
 # --------------------------
 # Classes
 # --------------------------
@@ -207,7 +269,7 @@ class PMCsearchReporter (object):
 					# {"new type name" : [ pmIDs w/ type] }
 	self.nWithNewTypes = 0		# num articles w/ new types
 
-	self.noPdf = []			# [pmIDs] w/ no PDF we could find
+	self.noPdf = []			# [(pmID, pmcID, pub date), ...] w/ no PDF we could find
 	self.mgiPubmedIds=[]		# [pmIDs] skipped since in MGI
 	self.noPubmedIds=[]		# [pmcIDs] skipped since no PMID
     # ---------------------
@@ -236,7 +298,7 @@ class PMCsearchReporter (object):
 
     def gotNoPdf(self, article):
 	""" couldn't get PDF url for this article """
-	self.noPdf.append(article.pmid)
+	self.noPdf.append((article.pmid, article.pmcid, article.date))
 
     def gotNoPmid(self, article):
 	""" couldn't get PMID for this article """
@@ -285,10 +347,13 @@ class PMCsearchReporter (object):
 
 	if len(self.noPdf) > 0:
 	    output += "%6d Articles w/ no PDFs:\n" % len(self.noPdf)
-	    output += '\tPMID' + ', '.join( map(str, self.noPdf[:6]) ) + '\n'
+	    output += '\tPMID' + ', '.join( map(str, map(lambda x: x[0], self.noPdf[:6])) ) + '\n'
 
 	return output
 
+    def getIdsWithNoPdfs(self):
+        return self.noPdf
+    
     def getReportHeader(self):
 	# for now
 	return ''
@@ -413,32 +478,42 @@ class PMCfileRangler (object):
 	self.cmdIndexes = []
 	self.cmds = []
 	self.articles = []
-
+	
 	for i, artE in enumerate(resultsE.findall('article')):
-	    
-	    # fill an article record with the fields we care about
-	    art = PMCarticle()
-	    art.journal = journalName
-	    art.type = artE.attrib['article-type']
+		# fill an article record with the fields we care about
+		art = PMCarticle()
+		art.journal = journalName
+		art.type = artE.attrib['article-type']
 
-	    artMetaE = artE.find("front/article-meta")
+		artMetaE = artE.find("front/article-meta")
 
-	    art.pmcid  = artMetaE.find("article-id/[@pub-id-type='pmc']").text
-	    art.pmid   = artMetaE.find("article-id/[@pub-id-type='pmid']")
-	    if art.pmid == None:
-		#print "Cannot find PMID for PMC %s, skipping" % str(art.pmcid)
-		self.curReporter.gotNoPmid(art)
-		continue
-	    art.pmid   = artMetaE.find("article-id/[@pub-id-type='pmid']").text
+		pubDate = artMetaE.find("pub-date/[@pub-type='epub']")
+		if not pubDate:
+			pubDate = artMetaE.find("pub-date")
+		if pubDate:
+			art.date = '%s/%s/%s' % (pubDate.find('year').text,
+				pubDate.find('month').text,
+				pubDate.find('day').text)
+		else:
+			art.date = '-'
+		
+		art.pmcid  = artMetaE.find("article-id/[@pub-id-type='pmc']").text
+		art.pmid   = artMetaE.find("article-id/[@pub-id-type='pmid']")
+		if art.pmid == None:
+			#print "Cannot find PMID for PMC %s, skipping" % str(art.pmcid)
+			self.curReporter.gotNoPmid(art)
+			continue
+		art.pmid   = artMetaE.find("article-id/[@pub-id-type='pmid']").text
+		if not self._wantArticle(art): continue
+		
+		# write files
+		if self.getPdf:	self._queuePdfFile(art, artE)
 
-	    if not self._wantArticle(art): continue
-
-	    # write files
-	    if self.getPdf:	self._queuePdfFile(art, artE)
 	# To use dispatcher, would need to save PDF requests and submit them
 	#  to a batch PDF method
 	self._runPdfQueue()
 	return
+
     # ---------------------
 
     def _runPdfQueue(self, ):

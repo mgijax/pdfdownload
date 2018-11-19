@@ -28,6 +28,7 @@ date | tee -a ${LOG}
 
 # Run the downloader script for default timeframe (passing in dates if specified)
 
+export PDFDOWNLOADLOGDIR
 ./download_papers.py $1 $2 "$3" | tee -a ${LOG}
 
 date | tee -a ${LOG}

@@ -116,4 +116,10 @@ if __name__ == '__main__':
     config.setDateRange('%s:%s' % (startDate.replace('-', '/'), stopDate.replace('-', '/')))
     config.setVerbose(False)
     
+    if 'PDFDOWNLOADLOGDIR' in os.environ:
+        noPdfFile = os.path.join(os.environ['PDFDOWNLOADLOGDIR'], 'noPdfs.log')
+        config.setNoPdfFile(noPdfFile)
+    else:
+        raise Exception('Must define PDFDOWNLOADLOGDIR')
+    
     backPopulate.process(config)
