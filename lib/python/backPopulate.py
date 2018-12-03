@@ -338,16 +338,16 @@ class PMCsearchReporter (object):
 	if len(self.noPubmedIds) > 0:
 	    output += "%6d Articles skipped since no PMID:\n" % \
 					    len(self.noPubmedIds)
-	    output += '\tPMC'+', '.join(map(str, self.noPubmedIds[:6])) + '\n'
+	    output += '\tPMC'+', '.join(map(str, self.noPubmedIds)) + '\n'
 
 	if len(self.mgiPubmedIds) > 0:
 	    output += "%6d Articles skipped since in MGI:\n" % \
 							len(self.mgiPubmedIds)
-	    output += '\tPMID'+', '.join(map(str, self.mgiPubmedIds[:6])) + '\n'
+	    output += '\tPMID'+', '.join(map(str, self.mgiPubmedIds)) + '\n'
 
 	if len(self.noPdf) > 0:
 	    output += "%6d Articles w/ no PDFs:\n" % len(self.noPdf)
-	    output += '\tPMID' + ', '.join( map(str, map(lambda x: x[0], self.noPdf[:6])) ) + '\n'
+	    output += '\tPMID' + ', '.join( map(str, map(lambda x: x[0], self.noPdf)) ) + '\n'
 
 	return output
 
