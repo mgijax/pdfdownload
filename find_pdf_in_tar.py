@@ -52,7 +52,7 @@ main_re_string = '|'.join([
 		    r'nihms[-_]*[0-9]+$',	# nih funded articles, I think
 		    r'ncomms[0-9]+$',		# Nat Commun
 		    r'onc[0-9]+a$',		# Oncogene
-		    r'dmm[-_]*[0-9a-z\-]+$',	# Dis_Model_Mech journal
+		    r'dmm[-_]*[0-9\-]+$',	# Dis_Model_Mech journal
 		    ])
 
 #main_re_string = r'.*main$|nihms[-_]*[0-9]+$|.*article[-_]*[0-9]*$|ncomms[0-9]+$'
