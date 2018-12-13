@@ -581,8 +581,7 @@ class PMCfileRangler (object):
     def _createOutputDir(self, journalName):
 	""" create an output directory for this journalName
 	"""
-        journal = '_'.join( journalName.split(' ') )
-        self.curOutputDir = os.sep.join( [ self.basePath, journal ] )
+        self.curOutputDir = self.basePath
 
 	if not self.writeFiles: return
 	

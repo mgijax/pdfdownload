@@ -100,6 +100,7 @@ if [ "${suffix}" == "gz" ]; then
 		rm ${filename}
 		exitIfFailed $? "failed to remove tar file"
 	else
+		rm -rf ${directory}/${filename}
 		fail "no PDF found in gzip file"
 	fi
 elif [ "$suffix" == "pdf" -o "$suffix" == "PDF" ]; then 
