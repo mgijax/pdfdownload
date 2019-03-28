@@ -28,3 +28,6 @@ export PDFDOWNLOADLOGDIR
 # number of days to look back to try to find articles we don't have yet
 WINDOW_SIZE=60
 export WINDOW_SIZE
+
+# to whom to mail the noPdf logs
+MAIL_LOG_CUR=Nancy.Butler@jax.org

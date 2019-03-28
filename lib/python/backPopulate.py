@@ -178,7 +178,7 @@ def process(
 
     if args.noPdfFile:
     #    try:
-        count = writeNoPdfFile(args.noPdfFile, reporters)
+        count = writeNoPdfFile(args.noPdfFile, reporters, args.dateRange)
         progress('Wrote %d IDs for articles missing PDFs to %s\n' % (count, args.noPdfFile))
     #    except Exception, e:
     #        raise Exception('Downloaded PDFs, but could not write list of missing PDFs to: %s (%s)' % (args.noPdfFile, e))
@@ -188,7 +188,7 @@ def today():
     # today's date as YYYY/mm/dd
     return time.strftime('%Y/%m/%d', time.localtime())
     
-def writeNoPdfFile(filePath, reporters):
+def writeNoPdfFile(filePath, reporters, dateRange):
     # open & write a file to 'filePath' containing the IDs for any articles where PDFs were missing
     # (as collected in the reporters)
     
@@ -212,7 +212,14 @@ def writeNoPdfFile(filePath, reporters):
 
     fp = open(filePath, 'w')
     fp.write('IDs for records with missing PDFs, found by pdfdownload product\n')
-    fp.write('As of: %s\n\n' % today())
+    fp.write('As of: %s, searching: %s\n\n' % (today(), dateRange.replace(':', ' to ')))
+    
+    fp.write('Instructions:\n')
+    fp.write('  1. Go to Pubmed Central (PMC) at https://www.ncbi.nlm.nih.gov/pmc/\n')
+    fp.write('  2. Search by the PMC ID from the report\n')
+    fp.write('  3. Use the DOI ID at the top of the PMC record to go to the journal site.\n')
+    fp.write('  4. Download the PDF (if it is an option do not choose the PDF + SI).\n')
+    fp.write('  5. Put in the neb folder on NewNewcurrent.\n\n')
     
     fp.write(template % (pmcTitle, pmTitle, dateTitle))
     fp.write(template % ('-' * maxPmcLength, '-' * maxPmLength, '-' * dateLength))
@@ -271,7 +278,6 @@ class PMCsearchReporter (object):
 
 	self.noPdf = []			# [(pmID, pmcID, pub date), ...] w/ no PDF we could find
 	self.mgiPubmedIds=[]		# [pmIDs] skipped since in MGI
-	self.noPubmedIds=[]		# [pmcIDs] skipped since no PMID
     # ---------------------
 
     def skipArticle(self, article,):
@@ -300,17 +306,13 @@ class PMCsearchReporter (object):
 	""" couldn't get PDF url for this article """
 	self.noPdf.append((article.pmid, article.pmcid, article.date))
 
-    def gotNoPmid(self, article):
-	""" couldn't get PMID for this article """
-	self.noPubmedIds.append(article.pmcid)
-
     def skipInMgi(self, article):
 	""" no <body> tag for this article - hence, no text """
 	self.mgiPubmedIds.append(article.pmid)
 
     def getNumMatching(self):
 	tot = self.totalSearchCount - self.nSkipped -self.nWithNewTypes \
-	    - len(self.mgiPubmedIds) - len(self.noPdf) - len(self.noPubmedIds)
+	    - len(self.mgiPubmedIds) - len(self.noPdf)
 	return tot
 
     def getReport(self):
@@ -334,11 +336,6 @@ class PMCsearchReporter (object):
 	    for t in self.newTypes.keys():
 		output += "\t%6d with type: %s, example: %s\n" % \
 			( len(self.newTypes[t]), t, str(self.newTypes[t][0]) )
-
-	if len(self.noPubmedIds) > 0:
-	    output += "%6d Articles skipped since no PMID:\n" % \
-					    len(self.noPubmedIds)
-	    output += '\tPMC'+', '.join(map(str, self.noPubmedIds)) + '\n'
 
 	if len(self.mgiPubmedIds) > 0:
 	    output += "%6d Articles skipped since in MGI:\n" % \
@@ -368,19 +365,20 @@ class PMCfileRangler (object):
     # These values are taken from "article-type" attribute of <article>
     #  tag in PMC eutils fetch output
     articleTypes = {'research-article': True,
-			'review-article': False,
-			'other': False,
-			'correction': False,
+			'review-article': True,
+			'other': True,
+			'correction': True,
 			'editorial': False,
 			'article-commentary': False,
-			'brief-report': False,
-			'case-report': False,
-			'letter': False,
-			'discussion': False,
-			'retraction': False,
-			'oration': False,
-			'reply': False,
-			'news': False,
+			'brief-report': True,
+			'case-report': True,
+			'letter': True,
+			'discussion': True,
+			'retraction': True,
+			'oration': True,
+			'reply': True,
+			'news': True,
+            'expression-of-concern' : True,
 			}
 
     def __init__(self, 
@@ -499,11 +497,8 @@ class PMCfileRangler (object):
 		
 		art.pmcid  = artMetaE.find("article-id/[@pub-id-type='pmc']").text
 		art.pmid   = artMetaE.find("article-id/[@pub-id-type='pmid']")
-		if art.pmid == None:
-			#print "Cannot find PMID for PMC %s, skipping" % str(art.pmcid)
-			self.curReporter.gotNoPmid(art)
-			continue
-		art.pmid   = artMetaE.find("article-id/[@pub-id-type='pmid']").text
+		if art.pmid != None:
+			art.pmid = artMetaE.find("article-id/[@pub-id-type='pmid']").text
 		if not self._wantArticle(art): continue
 		
 		# write files

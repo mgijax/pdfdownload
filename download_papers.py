@@ -50,8 +50,11 @@ caches.initialize(os.environ['MGI_PUBLICUSER'], os.environ['MGI_PUBLICPASSWORD']
 ###--- Globals ---###
 
 # which journals do we want to search?
-journals = [ 'Aging Cell', 'Cilia', 'Dis Model Mech', 'Nucleic Acids Res', 'Cell Death Differ', 'J Lipid Res',
+journals = [ 'Aging Cell', 'Cilia', 'Dis Model Mech', 'Nucleic Acids Res', 
     'PLOS ONE', 'PLOS Genetics', 'PLOS Biology']
+
+# journals that have their content embargoed for a year, so we need to search them a year earlier than now
+embargoedJournals = [ 'Cell Death Differ', 'J Lipid Res' ]
 
 # number of days to look back to try to find articles (due to delay in transfer from journals to PubMed Central)
 windowSize = int(os.environ['WINDOW_SIZE'])
@@ -73,13 +76,19 @@ def parseParameters():
     # Throws: nothing
     # Notes: The stop date is midnight today, while the start date is midnight 'windowSize' days before.
     
-    global journals
+    global journals, embargoedJournals
     
     # if the user specified a single journal to search, strip it from the parameters and update the global
     # list of journals to process
     
     if sys.argv[-1] in journals:
         journals = [ sys.argv[-1] ]
+        embargoedJournals = []
+        sys.argv = sys.argv[:-1]
+
+    elif sys.argv[-1] in embargoedJournals:
+        journals = []
+        embargoedJournals = [ sys.argv[-1] ]
         sys.argv = sys.argv[:-1]
 
     elif sys.argv[-1] == '':            # empty string comes in if no journal specified; remove it
@@ -105,21 +114,42 @@ def parseParameters():
 
     return (startDate, stopDate)
 
+def yearAgo (date):
+    # for date (formatted as 'yyyy-mm-dd'), return the same month & day a year ago
+    pieces = date.split('-')
+    return '%s-%s-%s' % (int(pieces[0]) - 1, pieces[1], pieces[2]) 
+    
 ###--- main program ---###
 
 if __name__ == '__main__':
     startDate, stopDate = parseParameters()
     
-    config = backPopulate.Config()
-    config.setBasePath(os.environ['PDFDIR'])
-    config.setJournals(journals)
-    config.setDateRange('%s:%s' % (startDate.replace('-', '/'), stopDate.replace('-', '/')))
-    config.setVerbose(False)
+    if len(journals) > 0:
+        config = backPopulate.Config()
+        config.setBasePath(os.environ['PDFDIR'])
+        config.setJournals(journals)
+        config.setDateRange('%s:%s' % (startDate.replace('-', '/'), stopDate.replace('-', '/')))
+        config.setVerbose(False)
+        
+        if 'PDFDOWNLOADLOGDIR' in os.environ:
+            noPdfFile = os.path.join(os.environ['PDFDOWNLOADLOGDIR'], 'noPdfs.log')
+            config.setNoPdfFile(noPdfFile)
+        else:
+            raise Exception('Must define PDFDOWNLOADLOGDIR')
     
-    if 'PDFDOWNLOADLOGDIR' in os.environ:
-        noPdfFile = os.path.join(os.environ['PDFDOWNLOADLOGDIR'], 'noPdfs.log')
-        config.setNoPdfFile(noPdfFile)
-    else:
-        raise Exception('Must define PDFDOWNLOADLOGDIR')
+        backPopulate.process(config)
+
+    if len(embargoedJournals) > 0:
+        embConfig = backPopulate.Config()
+        embConfig.setBasePath(os.path.join(os.path.dirname(os.environ['PDFDIR']), 'embargo_PDF_download'))
+        embConfig.setJournals(embargoedJournals)
+        embConfig.setDateRange('%s:%s' % (yearAgo(startDate).replace('-', '/'), yearAgo(stopDate).replace('-', '/')))
+        embConfig.setVerbose(False)
+        
+        if 'PDFDOWNLOADLOGDIR' in os.environ:
+            noPdfFile = os.path.join(os.environ['PDFDOWNLOADLOGDIR'], 'embargoedNoPdfs.log')
+            embConfig.setNoPdfFile(noPdfFile)
+        else:
+            raise Exception('Must define PDFDOWNLOADLOGDIR')
     
-    backPopulate.process(config)
+        backPopulate.process(embConfig)

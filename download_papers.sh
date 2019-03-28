@@ -32,3 +32,22 @@ export PDFDOWNLOADLOGDIR
 ./download_papers.py $1 $2 "$3" | tee -a ${LOG}
 
 date | tee -a ${LOG}
+
+# mail the two noPdf logs to Nancy for manual processing
+
+if [ "${MAIL_LOG_CUR}" != "" ]; then
+	for i in `echo ${MAIL_LOG_CUR} | sed 's/,/ /g'`
+	do
+		if [ -f ${PDFDOWNLOADLOGDIR}/noPdfs.log ]; then
+			mailx -s "pdfdownload - No PDF Log" ${MAIL_LOG_CUR} < ${PDFDOWNLOADLOGDIR}/noPdfs.log
+		else
+			echo "No ${PDFDOWNLOADLOGDIR}/noPdfs.log to email" | tee -a ${LOG}
+		fi
+
+		if [ -f ${PDFDOWNLOADLOGDIR}/embargoedNoPdfs.log ]; then
+			mailx -s "pdfdownload - No PDF Log (Embargoed Journals)" ${MAIL_LOG_CUR} < ${PDFDOWNLOADLOGDIR}/embargoedNoPdfs.log
+		else
+			echo "No ${PDFDOWNLOADLOGDIR}/embargoedNoPdfs.log to email" | tee -a ${LOG}
+		fi
+	done
+fi
