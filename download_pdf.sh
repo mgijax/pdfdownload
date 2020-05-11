@@ -9,10 +9,11 @@
 # jak, 8/20/2018, adapted from
 #   https://github.com/mgijax/pdfdownload/blob/master/download_plos.py
 #   changed to take a 3rd param for the PDF file name and to work on MacOS
-#   (have not tested the changes on linux)
 
 USAGE="Usage: $0 <quoted URL> <directory> <final PDF filename>
 "
+# Example
+# download_pdf.sh 'https://ftp.ncbi.nlm.nih.gov/pub/pmc/oa_package/07/07/PMC3519825.tar.gz' dataDir PMC351925.pdf
 
 ###--- functions ---###
 
@@ -80,7 +81,7 @@ if [ "${suffix}" == "gz" ]; then
 	# Finding PDF article filename in the tar is complicated as many
 	#    supp data files are also PDFs
 	# The logic for finding the article PDF is in find_pdf_in_tar.py
-	pdfPath=`tar tvf ${directory}/${filename} | ${cwd}/find_pdf_in_tar.py`
+	pdfPath=`tar tvf ${directory}/${filename} | ${PYTHON} ${cwd}/find_pdf_in_tar.py`
 
 	if [ "${pdfPath}" != "" ]; then
 		# Linux: tar -x ${pdfPath} -f ${directory}/${filename}

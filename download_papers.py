@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python3
 
 # Name: download_papers.py
 # Purpose: Download PDFs from PubMed Central for the preceding sixty days.  This includes papers where:
@@ -12,7 +12,8 @@
 #    all relevant papers eventually.
 #
 # Implementation history
-#
+# 5/11/20 - jak
+#       TR13204 conversion to python 3.7
 # 10/23/18 - jsb
 #    updated to pull in six new journals' papers and to handle PLOS papers the same way
 #    (rather than querying the PLOS site itself)
@@ -20,8 +21,6 @@
 #	TR12737 removed PLOS Pathogens
 
 import sys
-sys.path.insert(0, '/usr/local/mgi/live/lib/python')
-sys.path.insert(0, './lib/python')
 
 USAGE = '''Usage: %s [yyyy-mm-dd] [yyyy-mm-dd] ['journal name']
     The default behavior (no parameters) is to get files for the sixty days

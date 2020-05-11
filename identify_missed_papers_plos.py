@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python3
 
 # Name: identify_missed_papers_plos.py
 # Purpose: Identify DOI IDs from PLOS that have passed our sixty day window and need manual attention.
@@ -10,11 +10,12 @@
 #
 # Implementation history
 #
+# 5/11/2020 - jak
+#       TR13204 conversion to python 3.7
 # 12/5/17 - sc
 #       TR12737 removed PLOS Pathogens
 
 import sys
-sys.path.insert(0, '/usr/local/mgi/live/lib/python')
 
 USAGE = '''Usage: %s [yyyy-mm-dd] [yyyy-mm-dd]
     The default behavior (no parameters) is to get DOI IDs for the period of
@@ -28,11 +29,9 @@ USAGE = '''Usage: %s [yyyy-mm-dd] [yyyy-mm-dd]
 import os 
 import re
 import time
-import urllib
-import Dispatcher
+#import urllib.request, urllib.parse, urllib.error
 import HttpRequestGovernor
 import Profiler
-import PubMedCentralAgent
 import caches
 
 ###--- setup ---###
@@ -178,17 +177,17 @@ if __name__ == '__main__':
     startDate, stopDate = getDates()
     papers = filterPapers(getPapers(startDate, stopDate))
 
-    print '-' * 40
-    print 'Profiler Report'
+    print('-' * 40)
+    print('Profiler Report')
     profiler.write()
 
-    print '-' * 40
-    print 'PLOS Governor Report'
+    print('-' * 40)
+    print('PLOS Governor Report')
     for line in governor.getStatistics():
-        print ' - %s' % line
+        print(' - %s' % line)
 
-    print '-' * 40
-    print 'Missed papers that are outside the PLOS downloader\'s search window: (%d papers)' % len(papers)
-    print '(%s)' % ') OR ('.join(map(lambda x : x['id'], papers))
+    print('-' * 40)
+    print('Missed papers that are outside the PLOS downloader\'s search window: (%d papers)' % len(papers))
+    print('(%s)' % ') OR ('.join([x['id'] for x in papers]))
 
-    print '-' * 40
+    print('-' * 40)

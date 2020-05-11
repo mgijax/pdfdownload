@@ -1,6 +1,6 @@
 #!/usr/bin/sh
 
-# Usage:  identify_missed_papers_plos.csh
+# Usage:  identify_missed_papers_plos.sh
 #
 # History
 #
@@ -25,6 +25,6 @@ date | tee -a ${LOG}
 
 # Run the identification script for default timeframe (passing in dates if specified)
 
-./identify_missed_papers_plos.py $1 $2 | tee -a ${LOG}
+${PYTHON} ./identify_missed_papers_plos.py $1 $2 | tee -a ${LOG}
 
 date | tee -a ${LOG}
