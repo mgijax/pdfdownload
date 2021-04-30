@@ -546,8 +546,12 @@ class PMCfileRangler (object):
 
         if not self.writeFiles: return	# don't really output
 
-        cmd = getPdfCmd( linkUrl, self.curOutputDir, 
-                                    'PMC' + str(article.pmcid) + '.pdf')
+        if article.pmid:
+            pdfFilename = "PMID_%s.pdf" % str(article.pmid)
+        else:
+            pdfFilename = "PMC%s.pdf" % str(article.pmcid)
+
+        cmd = getPdfCmd(linkUrl, self.curOutputDir, pdfFilename)
 
         #if self.verbose: progress('\n' + cmd + '\n')
 
