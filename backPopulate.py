@@ -450,6 +450,9 @@ class PMCfileRangler (object):
         """
         query = '"%s"[TA]+AND+%s' % (journalName, searchParams,)
         query = query.replace(' ','+')
+        
+        # send full query to log to aid debugging
+        progress("Full query: %s\n" % query.replace('+', ' '))
 
         # Search PMC for matching articles
         count, results, webenvURLParams = eulib.getSearchResults("PMC",
