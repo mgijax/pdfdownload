@@ -26,10 +26,21 @@ touch $LOG
 
 date | tee -a ${LOG}
 
-# Run the downloader script for default timeframe (passing in dates if specified)
+# Run the downloader scripts for default timeframe (passing in dates if specified)
 
 export PDFDOWNLOADLOGDIR
-${PYTHON} ./download_papers.py $1 $2 "$3" | tee -a ${LOG}
+
+CWD=`pwd`
+
+# do PubMed Central first
+cd pmc
+${PYTHON} ./download_pmc_papers.py $1 $2 "$3" | tee -a ${LOG}
+cd ${CWD}
+
+# then do Elsevier's SciDirect
+cd elsevier
+#${PYTHON} ./download_elsevier_papers.py $1 $2 "$3" | tee -a ${LOG}
+cd ${CWD}
 
 date | tee -a ${LOG}
 
