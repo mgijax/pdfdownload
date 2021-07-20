@@ -49,11 +49,13 @@ caches.initialize(os.environ['MGI_PUBLICUSER'], os.environ['MGI_PUBLICPASSWORD']
 ###--- Globals ---###
 
 # which journals do we want to search?
-journals = [ 'Aging Cell', 'Cilia', 'Dis Model Mech', 'Nucleic Acids Res', 
-    'PLOS ONE', 'PLOS Genetics', 'PLOS Biology']
+journals = [ 'Aging Cell', 'Dis Model Mech', 'Nucleic Acids Res', 
+    'PLOS ONE', 'PLOS Genetics', 'PLOS Biology', 'Nat Commun' ]
 
 # journals that have their content embargoed for a year, so we need to search them a year earlier than now
-embargoedJournals = [ 'Cell Death Differ', 'J Lipid Res' ]
+# (J Exp Med actually has a 6-month embargo, but we don't have a category for that.  So, we still get all the
+# articles this way, just a little later than we could have.)
+embargoedJournals = [ 'Cell Death Differ', 'J Lipid Res', 'J Exp Med' ]
 
 # number of days to look back to try to find articles (due to delay in transfer from journals to PubMed Central)
 windowSize = int(os.environ['WINDOW_SIZE'])
