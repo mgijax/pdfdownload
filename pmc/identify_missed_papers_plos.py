@@ -16,6 +16,7 @@
 #       TR12737 removed PLOS Pathogens
 
 import sys
+sys.path.insert(0, '../shared')
 
 USAGE = '''Usage: %s [yyyy-mm-dd] [yyyy-mm-dd]
     The default behavior (no parameters) is to get DOI IDs for the period of

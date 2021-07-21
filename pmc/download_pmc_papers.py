@@ -21,6 +21,7 @@
 #	TR12737 removed PLOS Pathogens
 
 import sys
+sys.path.insert(0, '../shared')
 
 USAGE = '''Usage: %s [yyyy-mm-dd] [yyyy-mm-dd] ['journal name']
     The default behavior (no parameters) is to get files for the sixty days
