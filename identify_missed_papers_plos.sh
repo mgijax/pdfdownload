@@ -25,6 +25,8 @@ date | tee -a ${LOG}
 
 # Run the identification script for default timeframe (passing in dates if specified)
 
+cd pmc
 ${PYTHON} ./identify_missed_papers_plos.py $1 $2 | tee -a ${LOG}
+cd ..
 
 date | tee -a ${LOG}
