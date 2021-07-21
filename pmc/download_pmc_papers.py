@@ -24,7 +24,7 @@ import sys
 
 USAGE = '''Usage: %s [yyyy-mm-dd] [yyyy-mm-dd] ['journal name']
     The default behavior (no parameters) is to get files for the sixty days
-    preceding today for all nine allowed journals.  If you specify dates, you
+    preceding today for all ten allowed journals.  If you specify dates, you
     must specify both.  The first is the start date and the second is the
     end date, both inclusive.  If you specify a journal name, it is case-
     sensitive, should be enclosed in quotes, and must be one of the 
