@@ -1,3 +1,8 @@
+TAG: pdfdownload-6-0-17-2
+DATE: 07/21/2021
+STAFF: jsb
+CHANGES: fixed bug where identify_missing_papers_plos.sh failed
+
 TAG: pdfdownload-6-0-17-1
 DATE: 07/21/2021
 STAFF: jsb
