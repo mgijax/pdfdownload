@@ -41,6 +41,9 @@ caches.initialize(os.environ['MGI_PUBLICUSER'], os.environ['MGI_PUBLICPASSWORD']
 apikey = os.environ['ELSEVIER_APIKEY']
 insttoken = os.environ['ELSEVIER_INSTTOKEN']
 
+# Initialize Elsevier API client
+elsClient = ElsClient(apikey, inst_token=insttoken)
+
 ###--- journal definitions ---###
 
 class Journal(object):  # simple journal struct
@@ -128,8 +131,26 @@ def parseParameters():
 
     return (startDate, stopDate)
 
+def searchJournal (journal, startDate, stopDate):
+    # Look in the given journal for relevant articles between startDate and stopDate.
+
+    longName = journal.elsevierName
+    query = {'pub'        : '"%s"' % longName,
+             'qs'         : 'mice',
+             'loadedAfter': startDate + 'T00:00:00Z',
+             'display'    : { 'sortBy': 'date' }
+             }
+    search = SciDirectSearch(elsClient, query, getAll=True).execute()
+
+    print("%s: %d total search results" % (longName, search.getTotalNumResults()))
+    return
+    
 ###--- main program ---###
 
 if __name__ == '__main__':
     startDate, stopDate = parseParameters()
-    
+    print('Searching %d journal(s) from %s to %s' % (len(journals), startDate, stopDate))
+
+    for journal in journals:
+        searchJournal(journal, startDate, stopDate)
+    print('Done')

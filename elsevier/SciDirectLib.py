@@ -147,11 +147,11 @@ class ElsClient(object):
             headers["X-ELS-Insttoken"] = self.inst_token
         logger.info("Sending GET request to %s contentType='%s'" % \
                                                             (URL, contentType))
-        req = urllib.Request(URL)
+        req = urllib.request.Request(URL)
         for (key, value) in list(headers.items()):
             req.add_header(key, value)
         
-        res = urllib.urlopen(req)
+        res = urllib.request.urlopen(req)
 
         self.__ts_last_req = time.time()
         self._status_code=res.code
@@ -198,14 +198,12 @@ class ElsClient(object):
         logger.info('Sending PUT request to ' + URL)
         logger.info('Params:  ' + str(jsonParams))
 
-#        r = requests.put(URL, headers=headers, data=jsonParams)
-
-        req = urllib.Request(URL, data=jsonParams, method='PUT')
+        req = urllib.request.Request(URL, data=jsonParams, method='PUT')
         
         for (key, value) in list(headers.items()):
             req.add_header(key, value)
         
-        res = urllib.urlopen(req)
+        res = urllib.request.urlopen(req)
 
         self.__ts_last_req = time.time()
         self._status_code=res.code
