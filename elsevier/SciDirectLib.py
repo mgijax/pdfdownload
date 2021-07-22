@@ -67,7 +67,9 @@ There are automated tests for this module: # includes usage examples
 import json, time, os, logging
 import urllib.request
 from copy import deepcopy
-#from pip._internal import req
+
+LOGDIR = './logs'
+logger = None
 
 def get_logger(name):
     ## Adapted from https://docs.python.org/3/howto/logging-cookbook.html
@@ -76,10 +78,10 @@ def get_logger(name):
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
     # create log path, if not already there
-    logPath = './logs'
+    logPath = LOGDIR
     if not os.path.exists(logPath):
         os.mkdir(logPath)
-    logFileName = 'SciDirectLib-%s.log' % time.strftime('%Y%m%d')
+    logFileName = 'SciDirectLib.diag.log'
     logFilePath = os.path.join(logPath, logFileName)
     # create file handler which logs even debug messages
     fh = logging.FileHandler(logFilePath)
@@ -98,10 +100,14 @@ def get_logger(name):
     logger.info("SciDirectLib log started.")
     return logger
 
-# TODO: add option to disable logging, configure location of log file
-#       maybe we just want to pass an open log file to write to instead of 
-#       using the logging framework?
-logger = get_logger(__name__)
+def initLogger(logDir):
+    # set the logger directory and initialize the logger
+    global LOGDIR, logger
+
+    LOGDIR = logDir
+    logger = get_logger(__name__)
+    return
+    
 url_base = "https://api.elsevier.com/"
 
 class ElsClient(object):

@@ -39,7 +39,7 @@ cd ${CWD}
 
 # then do Elsevier's SciDirect
 cd elsevier
-#${PYTHON} ./download_elsevier_papers.py $1 $2 "$3" | tee -a ${LOG}
+${PYTHON} ./download_elsevier_papers.py $1 $2 "$3" | tee -a ${LOG}
 cd ${CWD}
 
 date | tee -a ${LOG}

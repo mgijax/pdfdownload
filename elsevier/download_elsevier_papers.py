@@ -15,7 +15,7 @@ import json
 import re
 import time
 import caches
-from SciDirectLib import ElsClient, SciDirectSearch, SciDirectReference
+import SciDirectLib
 
 USAGE = '''Usage: %s [yyyy-mm-dd] [yyyy-mm-dd] ['journal name']
     The default behavior (no parameters) is to get files for the sixty days
@@ -42,7 +42,7 @@ apikey = os.environ['ELSEVIER_APIKEY']
 insttoken = os.environ['ELSEVIER_INSTTOKEN']
 
 # Initialize Elsevier API client
-elsClient = ElsClient(apikey, inst_token=insttoken)
+elsClient = SciDirectLib.ElsClient(apikey, inst_token=insttoken)
 
 # Should we actually write out the PDF files or not?  (True / False)
 ACTUALLY_WRITE_PDFS = True
@@ -57,6 +57,7 @@ DIAG_LOG = None             # diagnostic log
 
 if 'PDFDOWNLOADLOGDIR' in os.environ:
     PDF_LOG_DIR = os.environ['PDFDOWNLOADLOGDIR']
+    SciDirectLib.initLogger(PDF_LOG_DIR)
 else:
     raise Exception('Must define PDFDOWNLOADLOGDIR')
 
@@ -102,7 +103,7 @@ def bailout (error, showUsage = False):
     sys.stderr.write('Error: %s\n' % error)
     sys.exit(1)
 
-def debug(s):
+def debug(s, flush = False):
     # If running in DEBUG mode, write s to the DIAG_LOG.
     
     global DIAG_LOG
@@ -111,6 +112,8 @@ def debug(s):
         if not DIAG_LOG:
             DIAG_LOG = open(os.path.join(PDF_LOG_DIR, 'elsevier.diag.log'), 'w')
         DIAG_LOG.write(s + '\n')
+        if flush:
+            DIAG_LOG.flush()
 
     return
     
@@ -173,7 +176,7 @@ def searchJournal (journal, startDate, stopDate):
              'loadedAfter': startDate + 'T00:00:00Z',
              'display'    : { 'sortBy': 'date' }
              }
-    search = SciDirectSearch(elsClient, query, getAll=True).execute()
+    search = SciDirectLib.SciDirectSearch(elsClient, query, getAll=True).execute()
 
     debug("=" * 40)
     debug("%s: %d total search results" % (longName, search.getTotalNumResults()))
@@ -251,14 +254,14 @@ def downloadPapers (journal, results, stopDate):
     debug("-- %d missing PubMed IDs: %s" % (len(noIDs), ', '.join(noIDs)))
     debug("-- %d missing PDFs: %s" % (len(noPdfs), ', '.join(noPdfs)))
     debug("-- %d successfully downloaded: %s" % (len(downloaded), ', '.join(downloaded)))
-    debug("-- summary of matching publication types: %s" % str(refTypes))
+    debug("-- summary of matching publication types: %s" % str(refTypes), True)
     return 
 
 ###--- main program ---###
 
 if __name__ == '__main__':
     startDate, stopDate = parseParameters()
-    debug('Searching %d journal(s) from %s to %s' % (len(journals), startDate, stopDate))
+    debug('Searching %d journal(s) from %s to %s' % (len(journals), startDate, stopDate), True)
 
     for journal in journals:
         results = searchJournal(journal, startDate, stopDate)
