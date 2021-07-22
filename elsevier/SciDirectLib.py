@@ -65,9 +65,9 @@ There are automated tests for this module: # includes usage examples
 """
 
 import json, time, os, logging
-import urllib
+import urllib.request
 from copy import deepcopy
-from pip._internal import req
+#from pip._internal import req
 
 def get_logger(name):
     ## Adapted from https://docs.python.org/3/howto/logging-cookbook.html

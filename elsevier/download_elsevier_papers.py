@@ -44,6 +44,9 @@ insttoken = os.environ['ELSEVIER_INSTTOKEN']
 # Initialize Elsevier API client
 elsClient = ElsClient(apikey, inst_token=insttoken)
 
+# Should we actually write out the PDF files or not?  (True / False)
+ACTUALLY_WRITE_PDFS = False
+
 ###--- journal definitions ---###
 
 class Journal(object):  # simple journal struct
@@ -69,6 +72,10 @@ journals = [
     Journal('Neurobiology of Aging', 'Neurobiology of Aging'),
     Journal('Matrix Biology', 'Matrix Biology'),
     Journal('J Bio Chem', 'Journal of Biological Chemistry'),
+   ]
+
+journals = [
+    Journal('Arch Biochem Biophys', 'Archives of Biochemistry and Biophysics'),
    ]
 
 ###--- functions ---###
@@ -143,8 +150,45 @@ def searchJournal (journal, startDate, stopDate):
     search = SciDirectSearch(elsClient, query, getAll=True).execute()
 
     print("%s: %d total search results" % (longName, search.getTotalNumResults()))
-    return
+    return search
+
+def downloadPapers (journal, results, stopDate):
+    # Given our journal and and set of results, download all the PDFs that were published by the stopDate.
+    # (The start date was considered in the search, but the stop date is not.  So we need to handle that here.)
     
+    longName = journal.elsevierName         # long-form of the desired journal name
+    refTypes = {}                           # maps from each reference type to a count of those kept
+    numPMIDs = 0                            # number with PubMed IDs
+    numPDFs = 0                             # number of PDFs written
+
+    for r in results.getIterator():
+        try:
+            # The search will return articles from other journals, too, in cases where the desired journal
+            # name is contained within another.  So we should only keep those for the specified journal.
+            
+            if longName == r.getJournal():
+                refType = r.getPubType()
+                refTypes[refType] = refTypes.get(refType, 0) + 1
+                
+                # write pdf if we have PMID
+                if r.getPmid() != 'no PMID':
+                    numPMIDs += 1 
+                    print(r.getLoadDate())
+                    if ACTUALLY_WRITE_PDFS:
+                        numPDFs += 1 
+                        fname = 'pdfs/PMID_%s.pdf' % r.getPmid()
+                        with open(fname, 'wb') as f:
+                            f.write(r.getPdf())
+        except: # in case we get any exceptions working w/ this r, let's see it
+            print("Reference exception\n")
+            print(json.dumps(r.getDetails(), sort_keys=True, indent=2))
+            raise
+
+    print("-- %d w/ PMIDs, %d PDFs written" % (numPMIDs, numPDFs))
+    print("Summary of matching publication types:")
+    print(refTypes)
+    return 
+
 ###--- main program ---###
 
 if __name__ == '__main__':
@@ -152,5 +196,8 @@ if __name__ == '__main__':
     print('Searching %d journal(s) from %s to %s' % (len(journals), startDate, stopDate))
 
     for journal in journals:
-        searchJournal(journal, startDate, stopDate)
+        results = searchJournal(journal, startDate, stopDate)
+        if results.getTotalNumResults() > 0:
+            downloadPapers(journal, results, stopDate)
+
     print('Done')
