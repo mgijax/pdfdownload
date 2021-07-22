@@ -45,7 +45,25 @@ insttoken = os.environ['ELSEVIER_INSTTOKEN']
 elsClient = ElsClient(apikey, inst_token=insttoken)
 
 # Should we actually write out the PDF files or not?  (True / False)
-ACTUALLY_WRITE_PDFS = False
+ACTUALLY_WRITE_PDFS = True
+
+# run in debug mode to get more log output (True / False)
+DEBUG = True
+
+# output directories
+PDF_OUTPUT_DIR = None       # for PDF files
+PDF_LOG_DIR = None          # for output logs
+DIAG_LOG = None             # diagnostic log
+
+if 'PDFDOWNLOADLOGDIR' in os.environ:
+    PDF_LOG_DIR = os.environ['PDFDOWNLOADLOGDIR']
+else:
+    raise Exception('Must define PDFDOWNLOADLOGDIR')
+
+if 'PDFDIR' in os.environ:
+    PDF_OUTPUT_DIR = os.environ['PDFDIR']
+else:
+    raise Exception('Must define PDFDIR')
 
 ###--- journal definitions ---###
 
@@ -74,10 +92,6 @@ journals = [
     Journal('J Bio Chem', 'Journal of Biological Chemistry'),
    ]
 
-journals = [
-    Journal('Arch Biochem Biophys', 'Archives of Biochemistry and Biophysics'),
-   ]
-
 ###--- functions ---###
 
 def bailout (error, showUsage = False):
@@ -88,6 +102,18 @@ def bailout (error, showUsage = False):
     sys.stderr.write('Error: %s\n' % error)
     sys.exit(1)
 
+def debug(s):
+    # If running in DEBUG mode, write s to the DIAG_LOG.
+    
+    global DIAG_LOG
+    
+    if DEBUG:
+        if not DIAG_LOG:
+            DIAG_LOG = open(os.path.join(PDF_LOG_DIR, 'elsevier.diag.log'), 'w')
+        DIAG_LOG.write(s + '\n')
+
+    return
+    
 def parseParameters():
     # Purpose: get the start and stop dates for the download, narrow the set of journals to search(if needed)
     # Returns: (start date, stop date)
@@ -149,9 +175,16 @@ def searchJournal (journal, startDate, stopDate):
              }
     search = SciDirectSearch(elsClient, query, getAll=True).execute()
 
-    print("%s: %d total search results" % (longName, search.getTotalNumResults()))
+    debug("=" * 40)
+    debug("%s: %d total search results" % (longName, search.getTotalNumResults()))
     return search
 
+def isWithin (refDate, stopDate):
+    # Return True if the given refDate falls on or before the stopDate, False if it is later than the stopDate.
+    # If refDate is None, then assume it's within the stopDate so we don't miss papers.
+    
+    return (refDate == None) or (refDate <= stopDate)
+        
 def downloadPapers (journal, results, stopDate):
     # Given our journal and and set of results, download all the PDFs that were published by the stopDate.
     # (The start date was considered in the search, but the stop date is not.  So we need to handle that here.)
@@ -161,43 +194,78 @@ def downloadPapers (journal, results, stopDate):
     numPMIDs = 0                            # number with PubMed IDs
     numPDFs = 0                             # number of PDFs written
 
+    beyondStop = []     # references loaded after the stop date (by DOI)
+    wrongJournals = []  # list of wrong journals that were returned by the search
+    noIDs = []          # references with no PubMed IDs yet (by DOI)
+    noPdfs = []         # references with PubMed IDs but no PDFs (by PubMed)
+    downloaded = []     # successfully downloaded (by PubMed)
+    
+    debug('-- retrieving %s references' % results.getTotalNumResults())
+
     for r in results.getIterator():
         try:
+            rawDate = r.getLoadDate()
+            refDate = None
+            if rawDate:
+                pieces = rawDate.split('T')
+                if pieces:
+                    refDate = pieces[0]
+
             # The search will return articles from other journals, too, in cases where the desired journal
             # name is contained within another.  So we should only keep those for the specified journal.
+            # Also must ensure that the reference's date is not beyond the stopDate.
             
             if longName == r.getJournal():
-                refType = r.getPubType()
-                refTypes[refType] = refTypes.get(refType, 0) + 1
+                if isWithin(refDate, stopDate):
+                    refType = r.getPubType()
+                    refTypes[refType] = refTypes.get(refType, 0) + 1
                 
-                # write pdf if we have PMID
-                if r.getPmid() != 'no PMID':
-                    numPMIDs += 1 
-                    print(r.getLoadDate())
-                    if ACTUALLY_WRITE_PDFS:
-                        numPDFs += 1 
-                        fname = 'pdfs/PMID_%s.pdf' % r.getPmid()
-                        with open(fname, 'wb') as f:
-                            f.write(r.getPdf())
+                    # write pdf if we have PMID
+                    if r.getPmid() != 'no PMID':
+                        numPMIDs += 1 
+                        if ACTUALLY_WRITE_PDFS:
+                            numPDFs += 1 
+                            fname = os.path.join(PDF_OUTPUT_DIR, 'PMID_%s.pdf' % r.getPmid())
+                            try:
+                                with open(fname, 'wb') as f:
+                                    f.write(r.getPdf())
+                                downloaded.append(r.getPmid())
+                            except:
+                                noPdfs.append(r.getPmid())
+                    else:
+                        noIDs.append(r.getDoi())
+                else:
+                    beyondStop.append(r.getDoi())
+
+            elif r.getJournal() not in wrongJournals:
+                wrongJournals.append(r.getJournal())
+
+
         except: # in case we get any exceptions working w/ this r, let's see it
             print("Reference exception\n")
             print(json.dumps(r.getDetails(), sort_keys=True, indent=2))
             raise
 
-    print("-- %d w/ PMIDs, %d PDFs written" % (numPMIDs, numPDFs))
-    print("Summary of matching publication types:")
-    print(refTypes)
+    debug("-- %d Other Journals: %s" % (len(wrongJournals), ', '.join(wrongJournals)))
+    debug("-- %d Beyond the stop date: %s" % (len(beyondStop), ', '.join(beyondStop)))
+    debug("-- %d missing PubMed IDs: %s" % (len(noIDs), ', '.join(noIDs)))
+    debug("-- %d missing PDFs: %s" % (len(noPdfs), ', '.join(noPdfs)))
+    debug("-- %d successfully downloaded: %s" % (len(downloaded), ', '.join(downloaded)))
+    debug("-- summary of matching publication types: %s" % str(refTypes))
     return 
 
 ###--- main program ---###
 
 if __name__ == '__main__':
     startDate, stopDate = parseParameters()
-    print('Searching %d journal(s) from %s to %s' % (len(journals), startDate, stopDate))
+    debug('Searching %d journal(s) from %s to %s' % (len(journals), startDate, stopDate))
 
     for journal in journals:
         results = searchJournal(journal, startDate, stopDate)
         if results.getTotalNumResults() > 0:
             downloadPapers(journal, results, stopDate)
+
+    if DIAG_LOG:
+        DIAG_LOG.close()
 
     print('Done')
