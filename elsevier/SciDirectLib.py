@@ -191,19 +191,20 @@ class ElsClient(object):
         headers = {
             "X-ELS-APIKey"  : self.api_key,
             "User-Agent"    : self.__user_agent,
-            "Accept"        : 'application/json'
+            "Accept"        : 'application/json',
+            "content-type"  : 'application/json'
             }
         if self.inst_token:
             headers["X-ELS-Insttoken"] = self.inst_token
         logger.info('Sending PUT request to ' + URL)
         logger.info('Params:  ' + str(jsonParams))
 
-        req = urllib.request.Request(URL, data=jsonParams, method='PUT')
+        req = urllib.request.Request(url=URL, method='PUT')
         
         for (key, value) in list(headers.items()):
             req.add_header(key, value)
         
-        res = urllib.request.urlopen(req)
+        res = urllib.request.urlopen(req, data=jsonParams.encode())
 
         self.__ts_last_req = time.time()
         self._status_code=res.code
@@ -220,7 +221,7 @@ class ElsClient(object):
 
         ## Success
         self._status_msg='data retrieved'
-        return json.loads(r.read())
+        return json.loads(res.read())
 
     # end execPutRequest() -------------------
 
