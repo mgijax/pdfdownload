@@ -294,6 +294,7 @@ def downloadPapers (journal, results, startDate, stopDate):
             pmid = pmidCache.get(r.getPii())
         else:
             pmid = r.getPmid()
+            pmidCache.put(r.getPii(), pmid)
 
         if pmid != 'no PMID':
             pmRef = pmAgent.getReferenceInfo(pmid)
