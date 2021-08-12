@@ -83,6 +83,10 @@ def get_logger(name):
         os.mkdir(logPath)
     logFileName = 'SciDirectLib.diag.log'
     logFilePath = os.path.join(logPath, logFileName)
+    
+    if os.path.exists(logFilePath):
+        os.remove(logFilePath)
+
     # create file handler which logs even debug messages
     fh = logging.FileHandler(logFilePath)
     fh.setLevel(logging.DEBUG)
