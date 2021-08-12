@@ -16,6 +16,8 @@ import re
 import time
 import caches
 import SciDirectLib
+import MapCache
+import PubMedAgent
 
 USAGE = '''Usage: %s [yyyy-mm-dd] [yyyy-mm-dd] ['journal name']
     The default behavior (no parameters) is to get files for the sixty days
@@ -50,10 +52,15 @@ ACTUALLY_WRITE_PDFS = True
 # run in debug mode to get more log output (True / False)
 DEBUG = True
 
+# cache of papers already in the MGI db that have PDFs
+pubmedWithPDF = caches.PubMedWithPDF()
+
 # output directories
 PDF_OUTPUT_DIR = None       # for PDF files
 PDF_LOG_DIR = None          # for output logs
 DIAG_LOG = None             # diagnostic log
+
+HISTORICAL_WINDOW_SIZE = 240           # how many days is our window for searching (roughly 8 months)
 
 if 'PDFDOWNLOADLOGDIR' in os.environ:
     PDF_LOG_DIR = os.environ['PDFDOWNLOADLOGDIR']
@@ -65,6 +72,34 @@ if 'PDFDIR' in os.environ:
     PDF_OUTPUT_DIR = os.environ['PDFDIR']
 else:
     raise Exception('Must define PDFDIR')
+
+# cache to look up PubMed IDs for each pii
+pmidCache = MapCache.MapCache('pdfdownload_pmidCache.txt')
+
+# cache to look up publication date for each PubMed ID
+pubDateCache = MapCache.MapCache('pdfdownload_pubDateCache.txt')
+
+# cache to look up publication type for each PubMed ID
+pubTypeCache = MapCache.MapCache('pdfdownload_pubTypeCache.txt')
+
+monthMap = {
+    'Jan' : ('01', '31'),       # month number, default day number (if day not specified)
+    'Feb' : ('02', '28'),
+    'Mar' : ('03', '31'),
+    'Apr' : ('04', '30'),
+    'May' : ('05', '31'),
+    'Jun' : ('06', '30'),
+    'Jul' : ('07', '31'),
+    'Aug' : ('08', '31'),
+    'Sep' : ('09', '30'),
+    'Oct' : ('10', '31'),
+    'Nov' : ('11', '30'),
+    'Dec' : ('12', '31'),
+    }
+
+pmDate1 = re.compile('([0-9]{4}) ([A-Z][a-z]{2})[-]([A-Z][a-z]{2})')    # e.g. - 2021 Jan-Jul
+pmDate2 = re.compile('([0-9]{4}) ([A-Z][a-z]{2}) ([0-9]{1,2})')         # e.g. - 2021 Jun 1  OR  2021 Jun 12
+pmDate3 = re.compile('([0-9]{4}) ([A-Z][a-z]{2})')                      # e.g. - 2021 Jan
 
 ###--- journal definitions ---###
 
@@ -168,27 +203,68 @@ def parseParameters():
     return (startDate, stopDate)
 
 def searchJournal (journal, startDate, stopDate):
-    # Look in the given journal for relevant articles between startDate and stopDate.
+    # Look in the given journal for relevant articles that may fall between startDate and stopDate.
+    # (We cannot search by publication date, so we don't know for sure.  We'll filter them in the
+    # downloadPapers method to only retrieve those truly within that range.
 
+    # We want to cast a wide net to ensure that we get all papers published between startDate
+    # and stopDate, so we'll look for loaded dates up to HISTORICAL_WINDOW_SIZE days ago.
+    startAsStruct = time.strptime(startDate, '%Y-%m-%d')
+    startAsSeconds = time.mktime(startAsStruct)
+    searchDateAsSeconds = startAsSeconds - (HISTORICAL_WINDOW_SIZE * 24 * 60 * 60)     # go back 'n' days
+    searchDateAsStruct = time.localtime(searchDateAsSeconds)
+    searchDate = time.strftime('%Y-%m-%d', searchDateAsStruct) 
+    
     longName = journal.elsevierName
     query = {'pub'        : '"%s"' % longName,
              'qs'         : 'mice',
-             'loadedAfter': startDate + 'T00:00:00Z',
+             'loadedAfter': searchDate + 'T00:00:00Z',
              'display'    : { 'sortBy': 'date' }
              }
     search = SciDirectLib.SciDirectSearch(elsClient, query, getAll=True).execute()
 
     debug("=" * 40)
-    debug("%s: %d total search results" % (longName, search.getTotalNumResults()))
+    debug("%s: %d total search results since %s" % (longName, search.getTotalNumResults(), searchDate))
     return search
 
-def isWithin (refDate, stopDate):
-    # Return True if the given refDate falls on or before the stopDate, False if it is later than the stopDate.
-    # If refDate is None, then assume it's within the stopDate so we don't miss papers.
+def isWithin (pubDate, startDate, stopDate):
+    # Return True if the given pubDate falls between the startDate and stopDate, inclusive.  Return False
+    # otherwise, as we don't want papers published outside our window.
     
-    return (refDate == None) or (refDate <= stopDate)
-        
-def downloadPapers (journal, results, stopDate):
+    return (pubDate != None) and (pubDate >= startDate) and (pubDate <= stopDate)
+
+def getStandardDateFormat(pmd):
+    # Take the given PubMed date and convert it to a standard yyyy-mm-dd date format.  PubMed dates can come
+    # in like:  "2021 Jul 2"  or  "2021 Jul"  or  "2021 Jan-Jun"
+    
+    yyyy = '9999'       # bogus default date will always be outside the desired range
+    mm = '99'
+    dd = '99'
+
+    if pmd == None:
+        return '%s-%s-%s' % (yyyy, mm, dd)
+
+    match1 = pmDate1.match(pmd)
+    if match1:
+        yyyy = match1.group(1)
+        mm, dd = monthMap[match1.group(3)]
+    else:
+        match2 = pmDate2.match(pmd)
+        if match2:
+            yyyy = match2.group(1)
+            mm = monthMap[match2.group(2)][0]
+            dd = match2.group(3)
+            if len(dd) == 1:
+                dd = '0' + dd
+        else: 
+            match3 = pmDate3.match(pmd)
+            if match3:
+                yyyy = match3.group(1)
+                mm, dd = monthMap[match3.group(2)]
+    
+    return '%s-%s-%s' % (yyyy, mm, dd)
+    
+def downloadPapers (journal, results, startDate, stopDate):
     # Given our journal and and set of results, download all the PDFs that were published by the stopDate.
     # (The start date was considered in the search, but the stop date is not.  So we need to handle that here.)
     
@@ -203,58 +279,117 @@ def downloadPapers (journal, results, stopDate):
     noPdfs = []         # references with PubMed IDs but no PDFs (by PubMed)
     downloaded = []     # successfully downloaded (by PubMed)
     
-    debug('-- retrieving %s references' % results.getTotalNumResults())
+    debug('-- examining %s references' % results.getTotalNumResults())
 
+    # Sadly, we need to switch to use PubMed to look up accurate publication dates for these
+    # references.  The SciDirect ones are not consistent with the dates in the downloaded PDFs.
+    
+    publicationDates = {}
+
+    pmAgent = PubMedAgent.PubMedAgentMedline()
+    publicationDates = {}           # PM ID -> publication date
     for r in results.getIterator():
-        try:
-            rawDate = r.getLoadDate()
-            refDate = None
-            if rawDate:
-                pieces = rawDate.split('T')
-                if pieces:
-                    refDate = pieces[0]
+        pmid = None
+        if pmidCache.contains(r.getPii()):
+            pmid = pmidCache.get(r.getPii())
+        else:
+            pmid = r.getPmid()
 
-            # The search will return articles from other journals, too, in cases where the desired journal
-            # name is contained within another.  So we should only keep those for the specified journal.
-            # Also must ensure that the reference's date is not beyond the stopDate.
-            
-            if longName == r.getJournal():
-                if isWithin(refDate, stopDate):
-                    refType = r.getPubType()
-                    refTypes[refType] = refTypes.get(refType, 0) + 1
-                
-                    # write pdf if we have PMID
-                    if r.getPmid() != 'no PMID':
-                        numPMIDs += 1 
-                        if ACTUALLY_WRITE_PDFS:
-                            numPDFs += 1 
-                            fname = os.path.join(PDF_OUTPUT_DIR, 'PMID_%s.pdf' % r.getPmid())
-                            try:
-                                with open(fname, 'wb') as f:
-                                    f.write(r.getPdf())
-                                downloaded.append(r.getPmid())
-                            except:
-                                noPdfs.append(r.getPmid())
-                    else:
-                        noIDs.append(r.getDoi())
-                else:
-                    beyondStop.append(r.getDoi())
+        if pmid != 'no PMID':
+            pmRef = pmAgent.getReferenceInfo(pmid)
+            if pmRef != None:
+                publicationDates[pmid] = getStandardDateFormat(pmRef.getDate())
+                pubDateCache.put(pmid, publicationDates[pmid])
 
-            elif r.getJournal() not in wrongJournals:
+    debug('-- retrieved %d publication dates from PubMed' % len(publicationDates))
+
+    pubDateCache.save()
+    debug('-- wrote %d entries to cache file: %s' % (pubDateCache.size(), pubDateCache.getPath()))
+
+    totalCount = 0
+    wrongJournalCount = 0
+    
+    for r in list(results.getIterator())[100:250]:
+        pii = r.getPii()
+        totalCount = totalCount + 1
+
+        # Right up front, we can exclude papers from other journals.  (The SciDirect API uses a word
+        # search for journal name, so if our desired journal is a contained in of other journal names, we'll
+        # get papers back for those too.  Because the journal name is in the initial data packet received,
+        # eliminating those up front will prevent subsequent calls to retrieve other data.
+        if longName != r.getJournal():
+            wrongJournalCount = wrongJournalCount + 1
+            if r.getJournal() not in wrongJournals:
                 wrongJournals.append(r.getJournal())
+            continue
+            
+        # If we already have the PubMed ID cached, we don't need to go back to SciDirect to retrieve it.
+        pmid = None
+        if pmidCache.contains(pii):
+            pmid = pmidCache.get(pii)
+        else:
+            pmid = r.getPmid()
+            pmidCache.put(pii, pmid)
 
+        # skip any papers we already have in the database
+        if pubmedWithPDF.contains(pmid):
+            continue
+        
+        # If we already have the publication type cached, we don't need to go back to SciDirect to retrieve it.
+        # Otherwise, get it.
+        pubType = None
+        if pubTypeCache.contains(pmid):
+            pubType = pubTypeCache.get(pmid)
+        else:
+            pubType = r.getPubType()
+            pubTypeCache.put(pmid, pubType)
+        
+        try:
+            pubDate = None
+            if pmid in publicationDates:
+                pubDate = publicationDates[pmid]
+
+            # Must ensure that the reference's date is not beyond the stopDate.
+            
+            if isWithin(pubDate, startDate, stopDate):
+                refTypes[pubType] = refTypes.get(pubType, 0) + 1
+                
+                # write pdf if we have PMID
+                if pmid != 'no PMID':
+                    numPMIDs += 1 
+                    if ACTUALLY_WRITE_PDFS:
+                        numPDFs += 1 
+                        fname = os.path.join(PDF_OUTPUT_DIR, 'PMID_%s.pdf' % pmid)
+                        debug('downloading PMID_%s with pub date %s (between %s and %s)' % (pmid, pubDate, startDate, stopDate))
+                        try:
+                            with open(fname, 'wb') as f:
+                                f.write(r.getPdf())
+                            downloaded.append(pmid)
+                        except:
+                            noPdfs.append(pmid)
+                else:
+                    noIDs.append(r.getDoi())
+            else:
+                beyondStop.append(r.getDoi())
 
         except: # in case we get any exceptions working w/ this r, let's see it
             print("Reference exception\n")
             print(json.dumps(r.getDetails(), sort_keys=True, indent=2))
             raise
 
-    debug("-- %d Other Journals: %s" % (len(wrongJournals), ', '.join(wrongJournals)))
-    debug("-- %d Beyond the stop date: %s" % (len(beyondStop), ', '.join(beyondStop)))
-    debug("-- %d missing PubMed IDs: %s" % (len(noIDs), ', '.join(noIDs)))
-    debug("-- %d missing PDFs: %s" % (len(noPdfs), ', '.join(noPdfs)))
-    debug("-- %d successfully downloaded: %s" % (len(downloaded), ', '.join(downloaded)))
+    debug("-- excluded %d of %d papers because of wrong journal" % (wrongJournalCount, totalCount))
+    debug("-- excluded %d papers because publication date is outside the specified dates" % len(beyondStop))
+    debug("-- excluded %d papers because of missing PubMed ID" % len(noIDs))
+    debug("-- attempted %d papers that were missing PDF file" % len(noPdfs))
+    debug("-- %d other journals: %s" % (len(wrongJournals), ', '.join(wrongJournals)))
+    debug("-- %d papers successfully downloaded" % len(downloaded))
     debug("-- summary of matching publication types: %s" % str(refTypes), True)
+    
+    pmidCache.save()
+    debug('-- wrote %d entries to cache file: %s' % (pmidCache.size(), pmidCache.getPath()))
+
+    pubTypeCache.save()
+    debug('-- wrote %d entries to cache file: %s' % (pubTypeCache.size(), pubTypeCache.getPath()))
     return 
 
 ###--- main program ---###
@@ -266,7 +401,7 @@ if __name__ == '__main__':
     for journal in journals:
         results = searchJournal(journal, startDate, stopDate)
         if results.getTotalNumResults() > 0:
-            downloadPapers(journal, results, stopDate)
+            downloadPapers(journal, results, startDate, stopDate)
 
     if DIAG_LOG:
         DIAG_LOG.close()
