@@ -223,6 +223,7 @@ def searchJournal (journal, startDate, stopDate):
              }
     search = SciDirectLib.SciDirectSearch(elsClient, query, getAll=True).execute()
 
+    debug(' ')
     debug("=" * 40)
     debug("%s: %d total search results since %s" % (longName, search.getTotalNumResults(), searchDate))
     return search
@@ -279,7 +280,7 @@ def downloadPapers (journal, results, startDate, stopDate):
     noPdfs = []         # references with PubMed IDs but no PDFs (by PubMed)
     downloaded = []     # successfully downloaded (by PubMed)
     
-    debug('-- examining %s references' % results.getTotalNumResults())
+    debug('-- search returned %s references' % results.getTotalNumResults())
 
     # Sadly, we need to switch to use PubMed to look up accurate publication dates for these
     # references.  The SciDirect ones are not consistent with the dates in the downloaded PDFs.
@@ -288,29 +289,35 @@ def downloadPapers (journal, results, startDate, stopDate):
 
     pmAgent = PubMedAgent.PubMedAgentMedline()
     publicationDates = {}           # PM ID -> publication date
+    missed = 0
     for r in results.getIterator():
         pmid = None
         if pmidCache.contains(r.getPii()):
             pmid = pmidCache.get(r.getPii())
         else:
             pmid = r.getPmid()
-            pmidCache.put(r.getPii(), pmid)
+            if pmid != 'no PMID':
+                pmidCache.put(r.getPii(), pmid)
 
         if pmid != 'no PMID':
             pmRef = pmAgent.getReferenceInfo(pmid)
             if pmRef != None:
                 publicationDates[pmid] = getStandardDateFormat(pmRef.getDate())
                 pubDateCache.put(pmid, publicationDates[pmid])
+        else:
+            debug('No PMID for pii %s, title: %s' % (r.getPii(), r.getTitle()))
+                
+        if pmid not in publicationDates:
+#            debug('   > missing date for pii %s, pmid %s' % (r.getPii(), pmid))
+            missed = missed + 1
 
-    debug('-- retrieved %d publication dates from PubMed' % len(publicationDates))
-
-    pubDateCache.save()
-    debug('-- wrote %d entries to cache file: %s' % (pubDateCache.size(), pubDateCache.getPath()))
+    debug('-- retrieved %d publication dates from PubMed (%d do not have them yet)' % (len(publicationDates), missed))
 
     totalCount = 0
     wrongJournalCount = 0
+    inMGI = 0
     
-    for r in list(results.getIterator())[100:250]:
+    for r in results.getIterator():
         pii = r.getPii()
         totalCount = totalCount + 1
 
@@ -330,10 +337,12 @@ def downloadPapers (journal, results, startDate, stopDate):
             pmid = pmidCache.get(pii)
         else:
             pmid = r.getPmid()
-            pmidCache.put(pii, pmid)
+            if pmid != 'no PMID':
+                pmidCache.put(pii, pmid)
 
         # skip any papers we already have in the database
         if pubmedWithPDF.contains(pmid):
+            inMGI = inMGI + 1
             continue
         
         # If we already have the publication type cached, we don't need to go back to SciDirect to retrieve it.
@@ -378,19 +387,17 @@ def downloadPapers (journal, results, startDate, stopDate):
             print(json.dumps(r.getDetails(), sort_keys=True, indent=2))
             raise
 
-    debug("-- excluded %d of %d papers because of wrong journal" % (wrongJournalCount, totalCount))
+    debug('-- examined %d remaining papers' % totalCount)
+    debug("-- excluded %d papers already in MGI" % inMGI)
     debug("-- excluded %d papers because publication date is outside the specified dates" % len(beyondStop))
     debug("-- excluded %d papers because of missing PubMed ID" % len(noIDs))
-    debug("-- attempted %d papers that were missing PDF file" % len(noPdfs))
-    debug("-- %d other journals: %s" % (len(wrongJournals), ', '.join(wrongJournals)))
+    debug("-- excluded %d papers that were missing their PDF file" % len(noPdfs))
+    debug("-- excluded %d papers because they were from the wrong journal" % (wrongJournalCount))
+    if wrongJournalCount > 0:
+        debug("   > %d other journals: %s" % (len(wrongJournals), ', '.join(wrongJournals)))
     debug("-- %d papers successfully downloaded" % len(downloaded))
     debug("-- summary of matching publication types: %s" % str(refTypes), True)
     
-    pmidCache.save()
-    debug('-- wrote %d entries to cache file: %s' % (pmidCache.size(), pmidCache.getPath()))
-
-    pubTypeCache.save()
-    debug('-- wrote %d entries to cache file: %s' % (pubTypeCache.size(), pubTypeCache.getPath()))
     return 
 
 ###--- main program ---###
@@ -404,7 +411,16 @@ if __name__ == '__main__':
         if results.getTotalNumResults() > 0:
             downloadPapers(journal, results, startDate, stopDate)
 
+    pubDateCache.save()
+    debug('-- wrote %d entries to cache file: %s' % (pubDateCache.size(), pubDateCache.getPath()))
+
+    pmidCache.save()
+    debug('-- wrote %d entries to cache file: %s' % (pmidCache.size(), pmidCache.getPath()))
+
+    pubTypeCache.save()
+    debug('-- wrote %d entries to cache file: %s' % (pubTypeCache.size(), pubTypeCache.getPath()))
+
+    debug('Done')
+
     if DIAG_LOG:
         DIAG_LOG.close()
-
-    print('Done')
