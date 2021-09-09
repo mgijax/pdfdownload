@@ -49,14 +49,101 @@ caches.initialize(os.environ['MGI_PUBLICUSER'], os.environ['MGI_PUBLICPASSWORD']
 
 ###--- Globals ---###
 
-# which journals do we want to search?
-journals = [ 'Aging Cell', 'Dis Model Mech', 'Nucleic Acids Res', 
-    'PLOS ONE', 'PLOS Genetics', 'PLOS Biology', 'Nat Commun' ]
+# which journals do we want to search?  (All are immediate, open-access.  Embargoed journals are below.)
+journals = [
+    'Acta Neuropathol Commun',
+    'Aging (Albany NY)',
+    'Aging Cell',
+    'Biol Open',
+    'Biomed Res Int',
+    'Biomolecules',
+    'Biosci Rep',
+    'Blood Adv',
+    'BMC Genomics',
+    'BMC Res Notes',
+    'Cancer Sci',
+    'Cell Death Dis',
+    'Cell Mol Gastroenterol Hepatol',
+    'Cells',
+    'Commun Biol',
+    'Dis Model Mech',
+    'EBioMedicine',
+    'eLife',
+    'EMBO Mol Med',
+    'eNeuro',
+    'Exp Anim',
+    'Exp Mol Med',
+    'Front Aging Neurosci',
+    'Front Behav Neurosci',
+    'Front Cardiovasc Med',
+    'Front Cell Dev Biol',
+    'Front Cell Neurosci',
+    'Front Endocrinol (Lausanne)',
+    'Front Genet',
+    'Front Immunol',
+    'Front Mol Neurosci',
+    'Front Neurol',
+    'Front Neurosci',
+    'Front Pharmacol',
+    'Front Physiol',
+    'G3 (Bethesda)',
+    'Haematologica',
+    'Int J Biol Sci',
+    'Int J Mol Sci',
+    'iScience',
+    'J Am Heart Assoc',
+    'J Biol Chem',
+    'J Cell Mol Med',
+    'J Neuroinflammation',
+    'JCI Insight',
+    'Life Sci Alliance',
+    'mBio',
+    'Mol Brain',
+    'Mol Metab',
+    'Mol Neurodegener',
+    'Nat Commun',
+    'Neural Dev',
+    'Nucleic Acids Res', 
+    'Oncotarget',
+    'Oxid Med Cell Longev',
+    'Physiol Rep',
+    'PLOS Biology',
+    'PLOS Genetics',
+    'PLOS ONE',
+    'PLoS Pathog',
+    'Redox Biol',
+    'Sci Adv',
+    'Sci Rep',
+    'Stem Cell Reports',
+    'Theranostics',
+    'Transl Psychiatry',
+    ]
+    
+# journals that have their content embargoed for a period of time. We need to search them according to their
+# respective time delays.  Each pair is journal title : number of months of delay.  Note that the 
+# number of months is an approximate time, as we approximate a number of days per month.  See monthsAgo()
+# function for details.
+embargoedJournalDelays = {
+    'Autophagy' : 12,
+    'Cardiovasc Res' : 12,
+    'Cell Death Differ' : 12,
+    'Cereb Cortex' : 12,
+    'EMBO J' : 12,
+    'EMBO Rep' : 12,
+    'Genes Dev' : 6,
+    'Immunology' : 12,
+    'J Am Soc Nephrol' : 12,
+    'J Cell Biol' : 6,
+    'J Clin Invest' : 3,
+    'J Exp Med' : 6,
+    'J Lipid Res' : 12,
+    'J Neurosci' : 6,
+    'Mol Cell Biol' : 6,
+    'Proc Natl Acad Sci U S A' : 6,
+    }
 
-# journals that have their content embargoed for a year, so we need to search them a year earlier than now
-# (J Exp Med actually has a 6-month embargo, but we don't have a category for that.  So, we still get all the
-# articles this way, just a little later than we could have.)
-embargoedJournals = [ 'Cell Death Differ', 'J Lipid Res', 'J Exp Med' ]
+embargoedJournals = list(embargoedJournalDelays.keys())
+embargoedJournals.sort()
 
 # number of days to look back to try to find articles (due to delay in transfer from journals to PubMed Central)
 windowSize = int(os.environ['WINDOW_SIZE'])
@@ -116,8 +203,28 @@ def parseParameters():
 
     return (startDate, stopDate)
 
-def yearAgo (date):
-    # for date (formatted as 'yyyy-mm-dd'), return the same month & day a year ago
+# TODO:  Need to change this to move the date back by a certain number of months...
+
+def monthsAgo (date, journal):
+    # for date (formatted as 'yyyy-mm-dd'), return a suitable date based on the journal's embargo length
+    
+    if journal not in embargoedJournalDelays:
+        raise Error('Journal is not embargoed: %s' % journal)
+
+    months = embargoedJournalDelays[journal] 
+    if months == 12:
+        days = 365              # don't worry about leap year
+    elif months == 6:
+        days = 183              # half year, rounded
+    else:
+        days = months * 30      # approximately 30 days per month
+        
+    dateAsSeconds = time.mktime(time.strptime(date, '%Y-%m-%d'))
+    embDateAsSeconds = dateAsSeconds - days * 24 * 60 * 60
+    
+    
+    embargoedDate = time.strftime("%Y-%m-%d", time.localtime(time.time() - days * 24 * 60 * 60))
+
     pieces = date.split('-')
     return '%s-%s-%s' % (int(pieces[0]) - 1, pieces[1], pieces[2]) 
     
@@ -127,10 +234,15 @@ if __name__ == '__main__':
     startDate, stopDate = parseParameters()
     
     if len(journals) > 0:
+        journalDateRanges = {}
+        dateRange = '%s:%s' % (startDate.replace('-', '/'), stopDate.replace('-', '/'))
+        for journal in journals:
+            journalDateRanges[journal] = dateRange
+
         config = backPopulate.Config()
         config.setBasePath(os.environ['PDFDIR'])
         config.setJournals(journals)
-        config.setDateRange('%s:%s' % (startDate.replace('-', '/'), stopDate.replace('-', '/')))
+        config.setDateRanges(journalDateRanges)
         config.setVerbose(False)
         
         if 'PDFDOWNLOADLOGDIR' in os.environ:
@@ -142,10 +254,15 @@ if __name__ == '__main__':
         backPopulate.process(config)
 
     if len(embargoedJournals) > 0:
+        journalDateRanges = {}
+        for journal in journals:
+            dateRange = '%s:%s' % (monthsAgo(startDate, journal).replace('-', '/'), monthsAgo(stopDate, journal).replace('-', '/'))
+            journalDateRanges[journal] = dateRange
+
         embConfig = backPopulate.Config()
         embConfig.setBasePath(os.path.join(os.path.dirname(os.environ['PDFDIR']), 'embargo_PDF_download'))
         embConfig.setJournals(embargoedJournals)
-        embConfig.setDateRange('%s:%s' % (yearAgo(startDate).replace('-', '/'), yearAgo(stopDate).replace('-', '/')))
+        embConfig.setDateRanges(journalDateRanges)
         embConfig.setVerbose(False)
         
         if 'PDFDOWNLOADLOGDIR' in os.environ:

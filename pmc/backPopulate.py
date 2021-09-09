@@ -61,16 +61,13 @@ MICE_CLAUSE = '(mice[Title] OR mice[Abstract] OR mice[Body - All Words])'
 # eutils PMC search clause to restrict PMC search to open access articles
 OPEN_ACCESS_CLAUSE = 'open access[filter]'
 
-# Volumes earlier than 2016 should be up to date
-DEFAULT_DATERANGE = '2010/01/01:2016/12/31'
-
 # defines what config info is expected by this module -- Construct one of these,
 # populate it, and pass it into the process() function.
 class Config:
     def __init__ (self):
         self.basePath = '.'
         self.journals = []
-        self.dateRange = DEFAULT_DATERANGE
+        self.dateRanges = None
         self.pmcID = None
         self.miceOnly = True
         self.maxFiles = 0
@@ -93,9 +90,9 @@ class Config:
         self.journals = journals
         return
     
-    def setDateRange(self, dr):
-        # date range:  yyyy/mm/dd:yyyy/mm/dd
-        self.dateRange = dr
+    def setDateRanges(self, dr):
+        # date ranges:  { journal name : 'yyyy/mm/dd:yyyy/mm/dd', ... }
+        self.dateRanges = dr
         return
     
     def setPmcID(self, pmcID):
@@ -125,7 +122,7 @@ class Config:
     
 # --------------------------
 
-def buildJournalSearch(queryStrings, journals):
+def buildJournalSearch(baseQueryString, journals, dateRanges):
     """ return a { journalName : [ query strings ], ... }
         queryStrings = [ queryString, ... ]
         files = [ filenames to read journalNames from]
@@ -133,7 +130,7 @@ def buildJournalSearch(queryStrings, journals):
     """
     journalsToSearch = {}
     for journal in journals:
-        journalsToSearch[journal.strip()] = queryStrings
+        journalsToSearch[journal.strip()] = [ baseQueryString % dateRanges[journal] ]
     return journalsToSearch
 
 # --------------------------
@@ -150,9 +147,9 @@ def process(
         return
 
     # just one query string per journal for now
-    queryStrings = ["%s[DP] AND %s" % (args.dateRange, OPEN_ACCESS_CLAUSE)]
+    baseQueryString = "%%s[DP] AND %s" % OPEN_ACCESS_CLAUSE
 
-    journalsToSearch = buildJournalSearch(queryStrings, args.journals)
+    journalsToSearch = buildJournalSearch(baseQueryString, args.journals, args.dateRanges)
     startTime = time.time()
 
     if args.miceOnly:		# add mice-only clause to each search
@@ -178,7 +175,7 @@ def process(
 
     if args.noPdfFile:
     #    try:
-        count = writeNoPdfFile(args.noPdfFile, reporters, args.dateRange)
+        count = writeNoPdfFile(args.noPdfFile, reporters, args.dateRanges)
         progress('Wrote %d IDs for articles missing PDFs to %s\n' % \
                                                 (count, args.noPdfFile))
     #    except Exception, e:
@@ -189,7 +186,7 @@ def today():
     # today's date as YYYY/mm/dd
     return time.strftime('%Y/%m/%d', time.localtime())
     
-def writeNoPdfFile(filePath, reporters, dateRange):
+def writeNoPdfFile(filePath, reporters, dateRanges):
     # open & write a file to 'filePath' containing the IDs for any articles
     #   where PDFs were missing (as collected in the reporters)
     
@@ -213,7 +210,13 @@ def writeNoPdfFile(filePath, reporters, dateRange):
 
     fp = open(filePath, 'w')
     fp.write('IDs for records with missing PDFs, found by pdfdownload product\n')
-    fp.write('As of: %s, searching: %s\n\n' % (today(), dateRange.replace(':', ' to ')))
+    fp.write('As of: %s, searching:\n' % today())
+
+    journals = list(dateRanges.keys())
+    journals.sort()
+    for journal in journals:
+        fp.write('  "%s" from %s\n' % (journal, dateRanges[journal].replace(':', ' to ')))
+    fp.write('\n')
     
     fp.write('Instructions:\n')
     fp.write('  1. Go to Pubmed Central (PMC) at https://www.ncbi.nlm.nih.gov/pmc/\n')
