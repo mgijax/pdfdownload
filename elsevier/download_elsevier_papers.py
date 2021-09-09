@@ -125,7 +125,6 @@ journals = [
     Journal('Neuroscience', 'Neuroscience'),
     Journal('Neurobiology of Aging', 'Neurobiology of Aging'),
     Journal('Matrix Biology', 'Matrix Biology'),
-    Journal('J Bio Chem', 'Journal of Biological Chemistry'),
    ]
 
 ###--- functions ---###
