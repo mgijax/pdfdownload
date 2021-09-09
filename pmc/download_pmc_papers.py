@@ -203,13 +203,11 @@ def parseParameters():
 
     return (startDate, stopDate)
 
-# TODO:  Need to change this to move the date back by a certain number of months...
-
 def monthsAgo (date, journal):
     # for date (formatted as 'yyyy-mm-dd'), return a suitable date based on the journal's embargo length
     
     if journal not in embargoedJournalDelays:
-        raise Error('Journal is not embargoed: %s' % journal)
+        raise Exception('Journal is not embargoed: %s' % journal)
 
     months = embargoedJournalDelays[journal] 
     if months == 12:
@@ -222,11 +220,7 @@ def monthsAgo (date, journal):
     dateAsSeconds = time.mktime(time.strptime(date, '%Y-%m-%d'))
     embDateAsSeconds = dateAsSeconds - days * 24 * 60 * 60
     
-    
-    embargoedDate = time.strftime("%Y-%m-%d", time.localtime(time.time() - days * 24 * 60 * 60))
-
-    pieces = date.split('-')
-    return '%s-%s-%s' % (int(pieces[0]) - 1, pieces[1], pieces[2]) 
+    return time.strftime('%Y-%m-%d', time.localtime(embDateAsSeconds))
     
 ###--- main program ---###
 
@@ -255,7 +249,7 @@ if __name__ == '__main__':
 
     if len(embargoedJournals) > 0:
         journalDateRanges = {}
-        for journal in journals:
+        for journal in embargoedJournals:
             dateRange = '%s:%s' % (monthsAgo(startDate, journal).replace('-', '/'), monthsAgo(stopDate, journal).replace('-', '/'))
             journalDateRanges[journal] = dateRange
 
