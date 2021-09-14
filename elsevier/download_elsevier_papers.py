@@ -110,21 +110,21 @@ class Journal(object):  # simple journal struct
 
 journals = [
     Journal('Arch Biochem Biophys', 'Archives of Biochemistry and Biophysics'),
-    Journal('Dev Biol', 'Developmental Biology'),
-    Journal('J Mol Cell Cardiol','Journal of Molecular and Cellular Cardiology'),
-    Journal('Brain Research', 'Brain Research'),
-    Journal('Experimental Cell Research', 'Experimental Cell Research'),
-    Journal('Experimental Neurology', 'Experimental Neurology'),
-    Journal('Neuron', 'Neuron'),
-    Journal('Neurobiology of Disease', 'Neurobiology of Disease'),
     Journal('Bone', 'Bone'),
-    Journal('Neurosci Letters', 'Neuroscience Letters'),
-    Journal('J Invest Dermatol', 'Journal of Investigative Dermatology'),
+    Journal('Brain Research', 'Brain Research'),
     Journal('Cancer Cell', 'Cancer Cell'),
     Journal('Cancer Lett', 'Cancer Letters'),
-    Journal('Neuroscience', 'Neuroscience'),
-    Journal('Neurobiology of Aging', 'Neurobiology of Aging'),
+    Journal('Dev Biol', 'Developmental Biology'),
+    Journal('Experimental Cell Research', 'Experimental Cell Research'),
+    Journal('Experimental Neurology', 'Experimental Neurology'),
+    Journal('J Invest Dermatol', 'Journal of Investigative Dermatology'),
+    Journal('J Mol Cell Cardiol','Journal of Molecular and Cellular Cardiology'),
     Journal('Matrix Biology', 'Matrix Biology'),
+    Journal('Neurobiology of Aging', 'Neurobiology of Aging'),
+    Journal('Neurobiology of Disease', 'Neurobiology of Disease'),
+    Journal('Neuron', 'Neuron'),
+    Journal('Neurosci Letters', 'Neuroscience Letters'),
+    Journal('Neuroscience', 'Neuroscience'),
    ]
 
 # Used to collect and report debugging info related to date handling
