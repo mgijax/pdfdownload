@@ -193,6 +193,9 @@ class DateTracker:
         
         journals = list(self.byJournal.keys())
         journals.sort()
+        if len(journals) == 0:
+            debug('All retrieved from cache; no new computations')
+            return
         
         for journal in journals:
             debug(journal)
@@ -391,13 +394,15 @@ def downloadPapers (journal, results, startDate, stopDate):
             if pmid != 'no PMID':
                 pmidCache.put(r.getPii(), pmid)
 
-        # TODO: should fix to consider caching of reference dates!
         if pmid != 'no PMID':
-            pmRef = pmAgent.getReferenceInfo(pmid)
-            if pmRef != None:
-                publicationDates[pmid] = getStandardDateFormat(pmRef.getDate())
-                pubDateCache.put(pmid, publicationDates[pmid])
-                dateTracker.track(journal.elsevierName, pmRef.getDate(), publicationDates[pmid])
+            if pubDateCache.contains(pmid):
+                publicationDates[pmid] = pubDateCache.get(pmid)
+            else:
+                pmRef = pmAgent.getReferenceInfo(pmid)
+                if pmRef != None:
+                    publicationDates[pmid] = getStandardDateFormat(pmRef.getDate())
+                    pubDateCache.put(pmid, publicationDates[pmid])
+                    dateTracker.track(journal.elsevierName, pmRef.getDate(), publicationDates[pmid])
         else:
             debug('No PMID for pii %s, title: %s' % (r.getPii(), r.getTitle()))
                 
