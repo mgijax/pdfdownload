@@ -127,6 +127,99 @@ journals = [
     Journal('Matrix Biology', 'Matrix Biology'),
    ]
 
+# Used to collect and report debugging info related to date handling
+class DateTracker:
+    # values for 'date format' -- what sort of date format was received?
+    NULL = 'null'
+    EXACT_DATE = 'exact date'      
+    BY_MONTH = 'full month'
+    BY_RANGE = 'multiple months'
+    
+    # values for 'flag' -- how does the date relate to our desired range?
+    NULL = 'null'
+    PAST = 'skipped: before desired range'
+    FUTURE = 'skipped: in the future'
+    IN_RANGE = 'kept: within desired range'
+    
+    def __init__ (self, startDate, endDate):
+        self.startDate = startDate
+        self.endDate = endDate
+        self.byJournal = {}      # { journal : { date format : { flag : count } } }
+        return
+    
+    def track (self, journal, rawDate, pubDate):
+        if journal not in self.byJournal:
+            self.byJournal[journal] = {}
+            
+        # identify the type of date specified
+        dateType = DateTracker.NULL
+        if rawDate != None:
+            match1 = pmDate1.match(rawDate)
+            if match1:
+                dateType = DateTracker.BY_RANGE
+            else:
+                match2 = pmDate2.match(rawDate)
+                if match2:
+                    dateType = DateTracker.EXACT_DATE
+                else: 
+                    dateType = DateTracker.BY_MONTH
+                
+        flag = DateTracker.NULL
+                       
+        # identify how the date relates to our desired range
+        if pubDate != None:
+            if pubDate < self.startDate:
+                flag = DateTracker.PAST
+            elif pubDate > self.endDate:
+                flag = DateTracker.FUTURE
+            else:
+                flag = DateTracker.IN_RANGE
+        
+        # work down through the layers and update our counter for this (journal, date type, and flag)
+        if dateType not in self.byJournal[journal]:
+            self.byJournal[journal][dateType] = {}
+            
+        if flag not in self.byJournal[journal][dateType]:
+            self.byJournal[journal][dateType][flag] = 0
+            
+        self.byJournal[journal][dateType][flag] = 1 + self.byJournal[journal][dateType][flag]
+        return
+    
+    def reportByJournal(self):
+        # write a debugging report regarding the dates retrieved for each journal, showing types of dates, etc.
+
+        debug('Analysis of Dates Returned by Journal')
+        debug(' ')
+        
+        journals = list(self.byJournal.keys())
+        journals.sort()
+        
+        for journal in journals:
+            debug(journal)
+            
+            dateTypes = list(self.byJournal[journal].keys())
+            dateTypes.sort()
+            
+            for dateType in dateTypes:
+                debug('  ' + dateType)
+                
+                flags = list(self.byJournal[journal][dateType].keys())
+                flags.sort()
+                
+                for flag in flags:
+                    debug('    %s : %d' % (flag, self.byJournal[journal][dateType][flag]))
+        return 
+
+    def report(self):
+        # write a debugging report regarding the dates retrieved for each journal, showing types of dates, etc.
+        
+        debug('-' * 50)
+        self.reportByJournal()
+        
+        return
+
+dateTracker = None
+
 ###--- functions ---###
 
 def bailout (error, showUsage = False):
@@ -298,11 +391,13 @@ def downloadPapers (journal, results, startDate, stopDate):
             if pmid != 'no PMID':
                 pmidCache.put(r.getPii(), pmid)
 
+        # TODO: should fix to consider caching of reference dates!
         if pmid != 'no PMID':
             pmRef = pmAgent.getReferenceInfo(pmid)
             if pmRef != None:
                 publicationDates[pmid] = getStandardDateFormat(pmRef.getDate())
                 pubDateCache.put(pmid, publicationDates[pmid])
+                dateTracker.track(journal.elsevierName, pmRef.getDate(), publicationDates[pmid])
         else:
             debug('No PMID for pii %s, title: %s' % (r.getPii(), r.getTitle()))
                 
@@ -403,12 +498,17 @@ def downloadPapers (journal, results, startDate, stopDate):
 
 if __name__ == '__main__':
     startDate, stopDate = parseParameters()
+    dateTracker = DateTracker(startDate, stopDate)
     debug('Searching %d journal(s) from %s to %s' % (len(journals), startDate, stopDate), True)
 
     for journal in journals:
+        journalStartTime = time.time()
         results = searchJournal(journal, startDate, stopDate)
         if results.getTotalNumResults() > 0:
             downloadPapers(journal, results, startDate, stopDate)
+
+        elapsed = time.time() - journalStartTime
+        debug('finished %s in %0.2f sec' % (journal.elsevierName, elapsed))
 
     pubDateCache.save()
     debug('-- wrote %d entries to cache file: %s' % (pubDateCache.size(), pubDateCache.getPath()))
@@ -419,7 +519,7 @@ if __name__ == '__main__':
     pubTypeCache.save()
     debug('-- wrote %d entries to cache file: %s' % (pubTypeCache.size(), pubTypeCache.getPath()))
 
-    debug('Done')
+    dateTracker.report()
 
     if DIAG_LOG:
         DIAG_LOG.close()
