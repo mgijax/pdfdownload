@@ -51,6 +51,37 @@ import xml.etree.ElementTree as ET
 import Dispatcher
 import caches
 
+# ------------------------
+# global stuff for logging
+# ------------------------
+
+DEBUG = True        # True to write extra debugging info
+DIAG_LOG = None     # file pointer for debug file
+PDF_LOG_DIR = None          # for output logs
+
+if 'PDFDOWNLOADLOGDIR' in os.environ:
+    PDF_LOG_DIR = os.environ['PDFDOWNLOADLOGDIR']
+else:
+    raise Exception('Must define PDFDOWNLOADLOGDIR')
+
+# -------------------------
+# general-purpose functions
+# -------------------------
+
+def debug(s, flush = True):
+    # If running in DEBUG mode, write s to the DIAG_LOG.
+    
+    global DIAG_LOG
+    
+    if DEBUG:
+        if not DIAG_LOG:
+            DIAG_LOG = open(os.path.join(PDF_LOG_DIR, 'pmc.diag.log'), 'w')
+        DIAG_LOG.write(s + '\n')
+        if flush:
+            DIAG_LOG.flush()
+
+    return
+    
 # --------------------------
 # Journals/Search params
 # --------------------------
@@ -333,22 +364,26 @@ class PMCsearchReporter (object):
         output += "%6d .pdf files written\n" % self.nResultsGotPdf
 
         if self.nSkipped > 0:
+            debug('%s : skipped %d articles because of undesired type' % (self.journal, self.nSkipped))
             output += "%6d Articles skipped because of type\n" % self.nSkipped
             for t in self.skippedArticles.keys():
                 output += "\t%6d type: %s\n" % (len(self.skippedArticles[t]), t)
 
         if self.nWithNewTypes > 0:
+            debug('%s : skipped %d articles because of unknown type' % (self.journal, self.nWithNewTypes))
             output += "%6d Articles w/ new types\n" % self.nWithNewTypes
             for t in self.newTypes.keys():
                 output += "\t%6d with type: %s, example: %s\n" % \
                         ( len(self.newTypes[t]), t, str(self.newTypes[t][0]) )
 
         if len(self.mgiPubmedIds) > 0:
+            debug('%s : skipped %d articles because already in MGI' % (self.journal, len(self.mgiPubmedIds)))
             output += "%6d Articles skipped since in MGI:\n" % \
                                                         len(self.mgiPubmedIds)
             output += '\tPMID'+', '.join(map(str, self.mgiPubmedIds)) + '\n'
 
         if len(self.noPdf) > 0:
+            debug('%s : skipped %d articles because missing PDFs' % (self.journal, len(self.noPdf)))
             output += "%6d Articles w/ no PDFs:\n" % len(self.noPdf)
             output += '\tPMID' + ', '.join(map(str,
                                             [x[0] for x in self.noPdf])) + '\n'
@@ -458,11 +493,16 @@ class PMCfileRangler (object):
         progress("Full query: %s\n" % query.replace('+', ' '))
 
         # Search PMC for matching articles
+        debug('%s : searching...' % journalName)
+        debug("%s : full query : %s" % (journalName, query.replace('+', ' ')))
+
         count, results, webenvURLParams = eulib.getSearchResults("PMC",
                                     query, op='fetch', retmax=maxFiles,
                                     URLReader=self.urlReader, debug=False )
         # JIM: check for and do something about errors and empty search rslts?
         #  (zero seems to work ok as is)
+
+        debug('%s : received %s results' % (journalName, count))
 
         #if self.verbose: progress( "'%s': %d PMC articles\n" % (query, count))
 
@@ -485,6 +525,7 @@ class PMCfileRangler (object):
         self.cmdIndexes = []
         self.cmds = []
         self.articles = []
+        toDownload = 0
         
         for i, artE in enumerate(resultsE.findall('article')):
                 # fill an article record with the fields we care about
@@ -509,12 +550,14 @@ class PMCfileRangler (object):
                 if art.pmid != None:
                         art.pmid = artMetaE.find("article-id/[@pub-id-type='pmid']").text
                 if not self._wantArticle(art): continue
+                toDownload = toDownload + 1
                 
                 # write files
                 if self.getPdf:	self._queuePdfFile(art, artE)
 
         # To use dispatcher, would need to save PDF requests and submit them
         #  to a batch PDF method
+        debug('%s : trying to download %d PDFs' % (journalName, toDownload))
         self._runPdfQueue()
         return
 
