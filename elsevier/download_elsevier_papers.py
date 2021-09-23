@@ -335,7 +335,11 @@ def parseParameters():
     else:
         # 24 hours per day, 60 minutes per hour, 60 seconds per minute
         startDate = time.strftime("%Y-%m-%d", time.localtime(time.time() - windowSize * 24 * 60 * 60))
-        stopDate =  time.strftime("%Y-%m-%d", time.localtime(time.time()))
+        
+        # Default behavior is now to bring in any papers with a publication date and a PubMed ID, even
+        # if they're scheduled for future publication.  Easiest way to get future papers with our existing
+        # setup is just to be generous in picking a future end date.  (say, 3 years for now)
+        stopDate =  time.strftime("%Y-%m-%d", time.localtime(time.time() + 365 * 3 * 24 * 60 * 60))
 
     return (startDate, stopDate)
 
