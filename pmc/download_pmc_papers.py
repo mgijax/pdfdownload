@@ -52,7 +52,6 @@ caches.initialize(os.environ['MGI_PUBLICUSER'], os.environ['MGI_PUBLICPASSWORD']
 # which journals do we want to search?  (All are immediate, open-access.  Embargoed journals are below.)
 journals = [
     'Acta Neuropathol Commun',
-    'Aging (Albany NY)',
     'Aging Cell',
     'Biol Open',
     'Biomed Res Int',
