@@ -539,9 +539,13 @@ class PMCfileRangler (object):
                 if not pubDate:
                         pubDate = artMetaE.find("pub-date")
                 if pubDate:
+                    if (pubDate.find('day') != None):
                         art.date = '%s/%s/%s' % (pubDate.find('year').text,
                                 pubDate.find('month').text,
                                 pubDate.find('day').text)
+                    else:
+                        art.date = '%s/%s/01' % (pubDate.find('year').text,
+                                pubDate.find('month').text)
                 else:
                         art.date = '-'
                 
@@ -595,6 +599,8 @@ class PMCfileRangler (object):
 
         if not self.writeFiles: return	# don't really output
 
+# uncomment this to see exactly which PMC IDs will be downloaded
+#        debug('Scheduling PMC%s' % str(article.pmcid))
         cmd = getPdfCmd( linkUrl, self.curOutputDir, 
                                     'PMC' + str(article.pmcid) + '.pdf')
 
