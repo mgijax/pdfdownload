@@ -251,7 +251,9 @@ if __name__ == '__main__':
     if len(embargoedJournals) > 0:
         journalDateRanges = {}
         for journal in embargoedJournals:
-            dateRange = '%s:%s' % (monthsAgo(startDate, journal).replace('-', '/'), monthsAgo(stopDate, journal).replace('-', '/'))
+            # For embargoed journals, need to shift the start date back by n months (see embargoedJournalDelays as top), but
+            # keep the end date as-is, since we want all future journals articles that are already in the queue for publication.
+            dateRange = '%s:%s' % (monthsAgo(startDate, journal).replace('-', '/'), stopDate.replace('-', '/'))
             journalDateRanges[journal] = dateRange
 
         embConfig = backPopulate.Config()
