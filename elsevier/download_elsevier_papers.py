@@ -450,7 +450,9 @@ def downloadPapers (journal, results, startDate, stopDate):
                     pubDateCache.put(pmid, publicationDates[pmid])
                     dateTracker.track(journal.elsevierName, pmRef.getDate(), publicationDates[pmid])
         else:
-            debug('No PMID for pii %s, title: %s' % (r.getPii(), r.getTitle()))
+# Uncomment this to collect info on pii IDs (internal to SciDirect) that cannot be mapped to PubMed IDs.
+#            debug('No PMID for pii %s, title: %s' % (r.getPii(), r.getTitle()))
+            pass
                 
         if pmid not in publicationDates:
 #            debug('   > missing date for pii %s, pmid %s' % (r.getPii(), pmid))
@@ -509,13 +511,15 @@ def downloadPapers (journal, results, startDate, stopDate):
             if isWithin(pubDate, startDate, stopDate):
                 refTypes[pubType] = refTypes.get(pubType, 0) + 1
                 
+# Uncomment this to collect info on all papers to be downloaded.
+#                debug('ref: %s, %s, %s, %s, %s' % (pii, pmid, r.getDoi(), pubDate, r.getJournal()))
                 # write pdf if we have PMID
                 if pmid != 'no PMID':
                     numPMIDs += 1 
                     if ACTUALLY_WRITE_PDFS:
                         numPDFs += 1 
                         fname = os.path.join(PDF_OUTPUT_DIR, 'PMID_%s.pdf' % pmid)
-                        debug('downloading PMID_%s with pub date %s (between %s and %s)' % (pmid, pubDate, startDate, stopDate))
+                        debug('Scheduling PMID_%s' % pmid)
                         try:
                             with open(fname, 'wb') as f:
                                 f.write(r.getPdf())
