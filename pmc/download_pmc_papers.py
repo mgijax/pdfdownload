@@ -102,7 +102,6 @@ journals = [
     'Nat Commun',
     'Neural Dev',
     'Nucleic Acids Res', 
-    'Oncotarget',
     'Oxid Med Cell Longev',
     'Physiol Rep',
     'PLOS Biology',
