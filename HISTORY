@@ -1,3 +1,8 @@
+TAG: pdfdownload-6-0-17-5
+DATE: 11/12/2021
+STAFF: dbm
+CHANGES: fixed download_elsevier_papers.py to handle date parameters when no jounal name is passed
+
 TAG: pdfdownload-6-0-17-4
 DATE: 10/20/2021
 STAFF: jsb
