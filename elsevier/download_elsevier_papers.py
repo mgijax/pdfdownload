@@ -310,13 +310,10 @@ def parseParameters():
             if sys.argv[-1] == journal.mgiName:
                 keep.append(journal)
                 break
-        journals = keep
 
-        if not journals:
-            bailout('Unrecognized journal: "%s"' % sys.argv[-1], True)
-
-        journals = [ sys.argv[-1] ]
-        sys.argv = sys.argv[:-1]
+        if keep:
+            journals = keep
+            sys.argv = sys.argv[:-1]
 
     else:
         # Empty string comes in if no journal specified; remove it and keep list of all journals as-is.
