@@ -1,3 +1,10 @@
+TAG: pdfdownload-6-0-17-6
+DATE: 12/10/2021
+STAFF: jak
+CHANGES: merged 6-0-16-2 back in, this commit got lost from Jon's work below
+since it never got merged into master.
+TR13344/WTS2-521 - chg downloaded PDF filenames to PMID_####.pdf
+
 TAG: pdfdownload-6-0-17-5
 DATE: 11/12/2021
 STAFF: dbm
@@ -22,6 +29,11 @@ TAG: pdfdownload-6-0-17-1
 DATE: 07/21/2021
 STAFF: jsb
 CHANGES: removed Cilia; added Nat Commun & J Exp Med; restructed to prepare for Elsevier SciDirect
+
+TAG: pdfdownload-6-0-16-2
+DATE: 04/30/2021
+STAFF: jak
+CHANGES: TR13344/WTS2-521 - chg downloaded PDF filenames to PMID_####.pdf
 
 TAG: pdfdownload-6-0-16-1
 DATE: 08/21/2020
