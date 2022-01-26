@@ -315,6 +315,9 @@ class PMCsearchReporter (object):
                                         #    w/ no PDF we could find
 
         self.mgiPubmedIds=[]		# [pmIDs] skipped since in MGI
+
+        self.noPubmedId = []            # [pmcIDs] skipped since they don't
+                                        #   have PMIDs
     # ---------------------
 
     def skipArticle(self, article,):
@@ -347,9 +350,14 @@ class PMCsearchReporter (object):
         """ no <body> tag for this article - hence, no text """
         self.mgiPubmedIds.append(article.pmid)
 
+    def skipNoPMID(self, article):
+        """ Record that we are skipping this because PMC doesn't have its PMID
+        """
+        self.noPubmedId.append(article.pmcid)
+
     def getNumMatching(self):
         tot = self.totalSearchCount - self.nSkipped -self.nWithNewTypes \
-            - len(self.mgiPubmedIds) - len(self.noPdf)
+            - len(self.mgiPubmedIds) - len(self.noPdf) -len(self.noPubmedId)
         return tot
 
     def getReport(self):
@@ -375,6 +383,12 @@ class PMCsearchReporter (object):
             for t in self.newTypes.keys():
                 output += "\t%6d with type: %s, example: %s\n" % \
                         ( len(self.newTypes[t]), t, str(self.newTypes[t][0]) )
+
+        if len(self.noPubmedId) > 0:
+            debug('%s : skipped %d articles because PMC does not have PMID' % (self.journal, len(self.noPubmedId)))
+            output += "%6d Articles skipped since PMC does not have PMID:\n" % \
+                                                        len(self.noPubmedId)
+            output += '\tPMCID'+', '.join(map(str, self.noPubmedId)) + '\n'
 
         if len(self.mgiPubmedIds) > 0:
             debug('%s : skipped %d articles because already in MGI' % (self.journal, len(self.mgiPubmedIds)))
@@ -622,6 +636,10 @@ class PMCfileRangler (object):
         """ Return True if we want this article (for now, we want its type)
             Need to add check for already in MGD.
         """
+        if not article.pmid:
+            self.curReporter.skipNoPMID(article)
+            return False
+
         if self.pubmedWithPDF.contains(article.pmid):
             self.curReporter.skipInMgi(article)
             return False
