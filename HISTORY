@@ -1,3 +1,10 @@
+TAG: pdfdownload-6-0-18-1
+DATE: 1/28/2022
+STAFF: jak
+CHANGES: PMC download omits downloads for pdfs that don't have PMID in PMC
+         Improved logging.
+WTS2-771
+
 TAG: pdfdownload-6-0-17-6
 DATE: 12/10/2021
 STAFF: jak

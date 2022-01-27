@@ -1,15 +1,83 @@
 # copied from autolittriage product, converted from script to library, updated
 # to integrate with routine downloader -- jsb, 10/23/2018
 
-""" Author:  Jim, August 2018
-    For specified journals, and other params (volume, issue, date range)
+""" Author:  Jim, August 2018, updated Jan 2022
+    For specified journals and date range
         get PDFs from PMC Eutils and Open Access (OA) search.
-    Populate output directories with PDFs
 
     Output: Status/summary messages to stdout
-            Populate output directories, one subdir for each journal processed.
+            Downloaded PDFs, named by PMID_######.pdf
+            A "noPdf" file listing PDFs that didn't download correctly to be
+                emailed to Nancy for her to manually get the PDFs.
 
-    Here is what I think I know about PMC and Open Access (OA):
+    Jan 2022: Overview of the process, brain dump
+
+    Why is this module called backPopulate.py? This was originally written to
+    back populate non-MGI-selected papers from PMC as negative training refs
+    to add to the DB. Jon adapted it from that and decided not to rename it.
+
+    Currently,
+    Given a list of OA journal names and begin/end dates, this code:
+    Searches PMC for matching papers that contain the word "mice".
+    For papers that match certain criteria, downloads the PDF from OA.
+    Reports to stdout
+        a log of its process including any errors it encounters
+        a summary of the papers it looked at for each journal
+    The criteria to select a paper for download:
+        * has its PMID available at PMC
+        * has the right publication type (e.g., not editorials, reviews)
+        * the paper (PMID) is not already in MGI
+
+    The downloading is complex and somewhat error prone:
+        1) the basic PMC search returns an XML document of matching articles
+        2) for each matching article,
+            parse the XML, get relevant bits (IDs, pub date, type, ...)
+            if it meets our criteria, queue it up for PDF download
+
+            Uses Jon's Dispatcher module that queues up a list of Unix
+            shell commands and runs a bunch of them up in parallel and
+            returns each of the command's retcode, stdout, stderr when they
+            are all done. This lets us run a bunch of downloads in parallel.
+
+            To queue it up, we first query OA to find the filename to
+            download from the OA FTP site.
+            See getPdfUrl() below.
+
+            The actual download command is a shell script: download_pdf.sh
+            (See getPdfCmd() below)
+            * uses curl to download the FTP file
+            * sometimes the FTP file is the PDF we want, sometimes it is a
+                gzipped tar file that may contain the PDF
+            * if it is the PDF file, download_pdf.sh just renames it
+            * if gzipped tar file, download_pdf.sh
+                unpacks the tar file,
+                calls find_pdf_in_tar.py to decide which PDF in the tar file
+                    is likely the article's PDF (there can be multiple PDFs,
+                    supplemental data and images are often stored as PDFs in
+                    the tar file)
+                grabs the PDF and renames it to our filename
+            * at each step, it checks for errors and reports all errors to
+                stdout to be propogated back to this module's output
+        3) what can go wrong:
+            * getPdfUrl() can fail to get the FTP filename to download (e.g.,
+                OA may not actually have the file yet)
+            * curl can fail, sometimes OA FTP just craps out
+            * the downloaded gzipped tar file can be mangled and doesn't unpack
+            * there may be no PDF file in the tar file
+            * If any of these happen, the article gets written to the "noPdf"
+                email for Nancy to look at.
+            * Often, the above errors are spurious and the PDFs will download
+                fine if you run the download again.
+            * find_pdf_in_tar.py may choose the wrong PDF (although that won't
+                be an error we catch here. Typically these will be caught by
+                littriageload sanity checks)
+
+                If FIND_PDF_LOG is defined in the Unix env,
+                    find_pdf_in_tar.py will log a summary of its
+                    reasoning to that file for debugging/analysis.
+
+
+    Aug 2018: Here is what I think I know about PMC and Open Access (OA):
     * When you search PMC via eutils, get list of matching articles (XML).
     * Basic structure of article XML:
         * <front> meta-data, journal, vol, issue, IDs, article-title, abstract
@@ -27,18 +95,13 @@
     * It may be that only OA articles have a <body>, I can't quite tell
     * I also looked at the bulk download of PMC extracted text.
         ftp://ftp.ncbi.nlm.nih.gov/pub/pmc/oa_bulk/
-        The examples I looked at didn't have the title text. Although again,
-        if we pull title + abstract from db/pubmed and fig text from downloaded
-        files, this might be fine.
+        The examples I looked at didn't have the title text.
         Again, I'm not sure which articles have this PMC extracted text.
     * some OA articles also have PDF on the OA FTP site. Need to query the OA
         service to find the location on the FTP site
         https://www.ncbi.nlm.nih.gov/pmc/tools/oa-service/
     * some OA articles have the PDF stored directly, some have the PDF within
         a .tgz file (some have no PDF, but presumably XML <body> ?)
-
-    * So Current Goal: for matching articles that are not in MGD already,
-                    get PDF files, if any, and XML files, if they have <body>
 """
 
 import sys
@@ -196,10 +259,10 @@ def process(
     reporters = pr.downloadFiles(journalsToSearch, maxFiles=args.maxFiles)
 
     numPdfs = 0
-    print()
+    print("\nSummary of Articles By Journal\n")
     for r in reporters:
         print(r.getReport())
-        numPdfs += r.getNumMatching()
+        numPdfs += r.getNumPdfs()
 
     print("Total PDFs Written: %d" %  numPdfs)
     progress( 'Total time: %8.2f seconds\n' % (time.time() - startTime) )
@@ -219,25 +282,27 @@ def today():
     
 def writeNoPdfFile(filePath, reporters, dateRanges):
     # open & write a file to 'filePath' containing the IDs for any articles
-    #   where PDFs were missing (as collected in the reporters)
+    #   where PDFs didn't download (as collected in the reporters)
     
     pmTitle = 'PubMed ID'
     pmcTitle = 'PMC ID'
     dateTitle = 'Pub Date'
+    journalTitle = 'Journal'
     maxPmLength = len(pmTitle)      # max width of PubMed ID column
     maxPmcLength = len(pmcTitle)    # max width of PubMed Central ID column
     dateLength = len('2018/11/17')
     
     for reporter in reporters:
-        for (pmid, pmcid, date) in reporter.getIdsWithNoPdfs():
+        for (pmid, pmcid, date, journal) in reporter.getIdsWithNoPdfs():
             if pmid:
                 maxPmLength = max(maxPmLength, len(pmid))
             if pmcid:
                 maxPmcLength = max(maxPmcLength, len(pmcid))
                 
-    # like '%-15s %-12s %s\n'
+    # like '%-15s %-12s %10s %s\n'
     # (The - ensures left-alignment within the set number of characters.)
-    template = '%%-%ds %%-%ds %%s\n' % (maxPmcLength, maxPmLength)
+    template = '%%-%ds %%-%ds %%%ds  %%s\n' % (maxPmcLength, maxPmLength,
+                                                                    dateLength)
 
     fp = open(filePath, 'w')
     fp.write('IDs for records with missing PDFs, found by pdfdownload product\n')
@@ -256,12 +321,15 @@ def writeNoPdfFile(filePath, reporters, dateRanges):
     fp.write('  4. Download the PDF (if it is an option do not choose the PDF + SI).\n')
     fp.write('  5. Put in the neb folder on NewNewcurrent.\n\n')
     
-    fp.write(template % (pmcTitle, pmTitle, dateTitle))
-    fp.write(template % ('-' * maxPmcLength, '-' * maxPmLength, '-' * dateLength))
-    
+    fp.write(template % (pmcTitle, pmTitle, dateTitle, journalTitle))
+    fp.write(template % ('_' * maxPmcLength, '_' * maxPmLength,
+                                            '_' * dateLength, '_' * 7))
     ct = 0
+    sortKey = lambda x: x[2]    # select date field for sorting
     for reporter in reporters:
-        for (pmid, pmcid, date) in reporter.getIdsWithNoPdfs():
+        articleList = reporter.getIdsWithNoPdfs()
+        articleList.sort(key=sortKey)
+        for (pmid, pmcid, date, journal) in articleList:
             if not pmid:
                 pmid = '-'
             if not pmcid:
@@ -269,7 +337,7 @@ def writeNoPdfFile(filePath, reporters, dateRanges):
             if not date:
                 date = '-'
                 
-            fp.write(template % (pmcid, pmid, date))
+            fp.write(template % (pmcid, pmid, date, journal))
             ct = ct + 1
             
     fp.close()
@@ -302,118 +370,125 @@ class PMCsearchReporter (object):
         self.nResultsProcessed = 0	
         self.nResultsGotPdf = 0		# num PDF files written
 
-        self.skippedArticles = {}	# dict of skipped because wrong type
-                                        # {"new type name" : [ pmIDs w/ type] }
-        self.nSkipped = 0		# num articles skipped
+        self.skippedByType = {}         # dict of skipped because wrong type
+                                        # {"type name" : [ pmcIDs w/ type] }
+        self.nSkippedByType = 0		# num articles skipped by type
 
-        self.newTypes = {}		# dict of article types found
+        self.skippedNewType = {}	# dict of new article types found
                                         #   that we haven't seen before
-                                        # {"new type name" : [ pmIDs w/ type] }
-        self.nWithNewTypes = 0		# num articles w/ new types
+                                        # {"new type name" : [ pmcIDs w/ type] }
+        self.nSkippedNewType = 0	# num articles w/ new types
 
-        self.noPdf = []			# [(pmID, pmcID, pub date), ...]
-                                        #    w/ no PDF we could find
+        self.noPdf = []			# [(pmID, pmcID, pub date, journal),...]
+                                        #    w/ no PDF we could download
 
         self.mgiPubmedIds=[]		# [pmIDs] skipped since in MGI
 
         self.noPubmedId = []            # [pmcIDs] skipped since they don't
                                         #   have PMIDs
+
+        self.earliestNoPubmedIdArticle = None # earliest article w/ no PMID
     # ---------------------
 
-    def skipArticle(self, article,):
-        """ Record that this article has been skipped because of its type
+    def skipWrongType(self, article,):
+        """ Record that this article has been skipped because it's not a type
+            that we download.
         """
-        self.nSkipped += 1
+        self.nSkippedByType += 1
         t = article.type
-        if t not in self.skippedArticles:
-            self.skippedArticles[t] = []
-        self.skippedArticles[t].append(article.pmid)
+        if t not in self.skippedByType:
+            self.skippedByType[t] = []
+        self.skippedByType[t].append(article.pmcid)
 
-    def newType(self, article):
+    def skipNewType(self, article):
         """ Record that we found a new article type that we haven't seen before
+            and we are skipping the download for this article
         """
-        self.nWithNewTypes += 1
+        self.nSkippedNewType += 1
         t = article.type
-        if t not in self.newTypes:
-            self.newTypes[t] = []
-        self.newTypes[t].append(article.pmid)
+        if t not in self.skippedNewType:
+            self.skippedNewType[t] = []
+        self.skippedNewType[t].append(article.pmcid)
+
+    def skipNoPMID(self, article):
+        """ Record that we are skipping this because PMC doesn't have its PMID
+        """
+        self.noPubmedId.append(article.pmcid)
+        # remember earliest article w/ no PMID
+        if not self.earliestNoPubmedIdArticle or \
+            str(article.date) < str(self.earliestNoPubmedIdArticle.date):
+            self.earliestNoPubmedIdArticle = article
+
+    def skipInMgi(self, article):
+        """ Record that we skipped downloading this PDF because it's in MGI """
+        self.mgiPubmedIds.append(article.pmid)
 
     def gotPdf(self, article):
         """ Record that we got/wrote a PDF file for this article """
         self.nResultsGotPdf += 1
 
     def gotNoPdf(self, article):
-        """ couldn't get PDF url for this article """
-        self.noPdf.append((article.pmid, article.pmcid, article.date))
-
-    def skipInMgi(self, article):
-        """ no <body> tag for this article - hence, no text """
-        self.mgiPubmedIds.append(article.pmid)
-
-    def skipNoPMID(self, article):
-        """ Record that we are skipping this because PMC doesn't have its PMID
+        """ Tried to download PDF for this article, but couldn't get it.
         """
-        self.noPubmedId.append(article.pmcid)
+        self.noPdf.append((article.pmid, article.pmcid, article.date,
+                                                            article.journal))
 
-    def getNumMatching(self):
-        tot = self.totalSearchCount - self.nSkipped -self.nWithNewTypes \
-            - len(self.mgiPubmedIds) - len(self.noPdf) -len(self.noPubmedId)
-        return tot
+    def getNumPdfs(self):
+        return self.nResultsGotPdf
 
     def getReport(self):
-        # for now
+        """ Return a summary report (string) for this journal """
         output = "Journal: %s\n'%s'\n" % (self.journal, self.searchParams)
 
-        output += "%6d %s articles matched search:\n" % \
+        output += "%6d %s articles matched search\n" % \
                             (self.totalSearchCount, self.journal[:25], )
         if self.totalSearchCount == 0: return output
 
-        output += "%6d maxFiles\n" % self.maxFiles
+        #output += "%6d maxFiles\n" % self.maxFiles
         output += "%6d .pdf files written\n" % self.nResultsGotPdf
 
-        if self.nSkipped > 0:
-            debug('%s : skipped %d articles because of undesired type' % (self.journal, self.nSkipped))
-            output += "%6d Articles skipped because of type\n" % self.nSkipped
-            for t in self.skippedArticles.keys():
-                output += "\t%6d type: %s\n" % (len(self.skippedArticles[t]), t)
+        if self.nSkippedByType > 0:
+            debug('%s : skipped %d articles because of undesired type' % (self.journal, self.nSkippedByType))
+            output += "%6d Articles skipped because of type\n" % self.nSkippedByType
+            for t in self.skippedByType.keys():
+                output += "\t%6d type: %s, example: PMCID %s\n" % \
+                  (len(self.skippedByType[t]), t, str(self.skippedByType[t][0]))
 
-        if self.nWithNewTypes > 0:
-            debug('%s : skipped %d articles because of unknown type' % (self.journal, self.nWithNewTypes))
-            output += "%6d Articles w/ new types\n" % self.nWithNewTypes
-            for t in self.newTypes.keys():
-                output += "\t%6d with type: %s, example: %s\n" % \
-                        ( len(self.newTypes[t]), t, str(self.newTypes[t][0]) )
+        if self.nSkippedNewType > 0:
+            debug('%s : skipped %d articles because of new type' % (self.journal, self.nSkippedNewType))
+            output += "%6d Articles skipped w/ new types\n" % self.nSkippedNewType
+            for t in self.skippedNewType.keys():
+                output += "\t%6d with type: %s, example: PMCID %s\n" % \
+                  (len(self.skippedNewType[t]),t,str(self.skippedNewType[t][0]))
 
         if len(self.noPubmedId) > 0:
-            debug('%s : skipped %d articles because PMC does not have PMID' % (self.journal, len(self.noPubmedId)))
+            debug('%s : skipped %d articles since PMC does not have PMID' % (self.journal, len(self.noPubmedId)))
             output += "%6d Articles skipped since PMC does not have PMID:\n" % \
                                                         len(self.noPubmedId)
-            output += '\tPMCID'+', '.join(map(str, self.noPubmedId)) + '\n'
+            output += '\tPMCID ' + ', '.join(map(str, self.noPubmedId)) + '\n'
+            output += '\tEarliest article w/o PMID: PMC%s %s\n' % \
+                        (str(self.earliestNoPubmedIdArticle.pmcid),
+                         str(self.earliestNoPubmedIdArticle.date))
 
         if len(self.mgiPubmedIds) > 0:
-            debug('%s : skipped %d articles because already in MGI' % (self.journal, len(self.mgiPubmedIds)))
-            output += "%6d Articles skipped since in MGI:\n" % \
+            debug('%s : skipped %d articles since already in MGI' % (self.journal, len(self.mgiPubmedIds)))
+            output += "%6d Articles skipped since already in MGI:\n" % \
                                                         len(self.mgiPubmedIds)
-            output += '\tPMID'+', '.join(map(str, self.mgiPubmedIds)) + '\n'
+            output += '\tPMID ' + ', '.join(map(str, self.mgiPubmedIds)) + '\n'
 
         if len(self.noPdf) > 0:
-            debug('%s : skipped %d articles because missing PDFs' % (self.journal, len(self.noPdf)))
-            output += "%6d Articles w/ no PDFs:\n" % len(self.noPdf)
-            output += '\tPMID' + ', '.join(map(str,
+            debug('%s : %d articles w/ PDF download problem' % (self.journal, len(self.noPdf)))
+            output += "%6d Articles w/ PDF download problem:\n" % len(self.noPdf)
+            output += '\tPMID ' + ', '.join(map(str,
                                             [x[0] for x in self.noPdf])) + '\n'
         return output
 
     def getIdsWithNoPdfs(self):
         return self.noPdf
-    
-    def getReportHeader(self):
-        # for now
-        return ''
 # end class PMCsearchReporter ------------------------
 
 class PMCfileRangler (object):
     """ Knows how to query PMC and download PDFs from PMC OA FTP site
-        Stores files in directories named by journal name.
     """
     # Article Types we know about, ==True if we want these articles,
     #  ==False if we don't
@@ -476,12 +551,12 @@ class PMCfileRangler (object):
             self._createOutputDir(journal)
 
             for searchParams in journalSearch[journal]:
-                progress("Searching %s %s..." % (journal, searchParams[:25]))
+                progress("\nSearching %s\n" % (journal))
                 startTime = time.time()
                 count, resultsE, results = self._runSearch(journal,
                                                     searchParams, maxFiles)
                 searchEnd = time.time()
-                progress('%d results.\n - Search time: %9.2f\n' % \
+                progress('%d results - Search time: %9.2f\n' % \
                                     (count, searchEnd-startTime))
 
                 self.curReporter = PMCsearchReporter(journal, searchParams,
@@ -490,7 +565,8 @@ class PMCfileRangler (object):
 
                 self._processResults(journal, resultsE, results)
                 processEnd = time.time()
-                progress(' - Process time: %8.2f\n' % (processEnd-searchEnd))
+                progress('Done %s downloads - Process time: %8.2f\n' % \
+                                        (journal, processEnd-searchEnd))
 
         return self.reporters
     # ---------------------
@@ -532,8 +608,8 @@ class PMCfileRangler (object):
         """ Process the results of the search.
             For each article in the results, 
                 parse the XML and pull out relevant bits.
-                Skip the article if it not of the right type.
-                Write out the requested files (xml, text, pdf)
+                Skip the article if we don't want it
+                Attempt PDF download
         """
         self.dispatcher = Dispatcher.Dispatcher(maxProcesses=5)
         self.cmdIndexes = []
@@ -541,40 +617,40 @@ class PMCfileRangler (object):
         self.articles = []
         toDownload = 0
         
+        progress("Queueing up download commands\n")
         for i, artE in enumerate(resultsE.findall('article')):
-                # fill an article record with the fields we care about
-                art = PMCarticle()
-                art.journal = journalName
-                art.type = artE.attrib['article-type']
+            # fill an article record with the fields we care about
+            art = PMCarticle()
+            art.journal = journalName
+            art.type = artE.attrib['article-type']
 
-                artMetaE = artE.find("front/article-meta")
+            artMetaE = artE.find("front/article-meta")
 
-                pubDate = artMetaE.find("pub-date/[@pub-type='epub']")
-                if not pubDate:
-                        pubDate = artMetaE.find("pub-date")
-                if pubDate:
-                    if (pubDate.find('day') != None):
-                        art.date = '%s/%s/%s' % (pubDate.find('year').text,
-                                pubDate.find('month').text,
-                                pubDate.find('day').text)
-                    else:
-                        art.date = '%s/%s/01' % (pubDate.find('year').text,
-                                pubDate.find('month').text)
+            pubDate = artMetaE.find("pub-date/[@pub-type='epub']")
+            if not pubDate:
+                pubDate = artMetaE.find("pub-date")
+            if pubDate:
+                if (pubDate.find('day') != None):
+                    art.date = '%s/%s/%s' % (pubDate.find('year').text,
+                                    pubDate.find('month').text.rjust(2,'0'),
+                                    pubDate.find('day').text.rjust(2,'0'))
                 else:
-                        art.date = '-'
-                
-                art.pmcid  = artMetaE.find("article-id/[@pub-id-type='pmc']").text
-                art.pmid   = artMetaE.find("article-id/[@pub-id-type='pmid']")
-                if art.pmid != None:
-                        art.pmid = artMetaE.find("article-id/[@pub-id-type='pmid']").text
-                if not self._wantArticle(art): continue
+                    art.date = '%s/%s/01' % (pubDate.find('year').text,
+                                    pubDate.find('month').text.rjust(2,'0'))
+            else:
+                art.date = '-'
+            
+            art.pmcid  = artMetaE.find("article-id/[@pub-id-type='pmc']").text
+
+            art.pmid   = artMetaE.find("article-id/[@pub-id-type='pmid']")
+            if art.pmid != None:
+                art.pmid = artMetaE.find("article-id/[@pub-id-type='pmid']").text
+            if self._wantArticle(art):  # queue up the download in Dispatcher
                 toDownload = toDownload + 1
-                
-                # write files
                 if self.getPdf:	self._queuePdfFile(art, artE)
 
-        # To use dispatcher, would need to save PDF requests and submit them
-        #  to a batch PDF method
+        # Run the Dispatcher, this runs a bunch of downloads concurrently
+        progress("Trying to download %d PDFs\n" % toDownload)
         debug('%s : trying to download %d PDFs' % (journalName, toDownload))
         self._runPdfQueue()
         return
@@ -582,7 +658,7 @@ class PMCfileRangler (object):
     # ---------------------
 
     def _runPdfQueue(self, ):
-        """ would be nice to factor out into a separate class
+        """ Run all the downloads in self.dispatcher
         """
         self.dispatcher.wait()
 
@@ -603,8 +679,10 @@ class PMCfileRangler (object):
     # ---------------------
 
     def _queuePdfFile(self, article, artE):
-
-        linkUrl = getPdfUrl(article.pmcid)	# this is slow!
+        """ Queue up a download in self.dispatcher
+        """
+        ## get the URL to download
+        linkUrl = getPdfUrl(article.pmcid)
 
         if linkUrl == '':
             self.curReporter.gotNoPdf(article)
@@ -613,18 +691,20 @@ class PMCfileRangler (object):
 
         if not self.writeFiles: return	# don't really output
 
-# uncomment this to see exactly which PMC IDs will be downloaded
-#        debug('Scheduling PMC%s' % str(article.pmcid))
+        # uncomment this to see exactly which PMC IDs will be downloaded
+        # debug('Scheduling PMC%s' % str(article.pmcid))
 
+        ## generate desired filename of downloaded PDF
         if article.pmid:
             pdfFilename = "PMID_%s.pdf" % str(article.pmid)
         else:
             pdfFilename = "PMC%s.pdf" % str(article.pmcid)
 
+        ## generate the download command
         cmd = getPdfCmd(linkUrl, self.curOutputDir, pdfFilename)
-
         #if self.verbose: progress('\n' + cmd + '\n')
 
+        ## queue up the command
         idx = self.dispatcher.schedule(cmd)
         self.cmdIndexes.append(idx)
         self.cmds.append(cmd)
@@ -633,29 +713,30 @@ class PMCfileRangler (object):
     # ---------------------
    
     def _wantArticle(self, article):
-        """ Return True if we want this article (for now, we want its type)
-            Need to add check for already in MGD.
+        """ Return True if we want this article
         """
-        if not article.pmid:
+        if not article.pmid:                          # no PMID
             self.curReporter.skipNoPMID(article)
             return False
 
-        if self.pubmedWithPDF.contains(article.pmid):
+        if self.pubmedWithPDF.contains(article.pmid): # already in MGI
             self.curReporter.skipInMgi(article)
             return False
 
-        if article.type in self.articleTypes:	# know this type
-            if not self.articleTypes[article.type]:	# but don't want it
-                self.curReporter.skipArticle(article)
+        if article.type in self.articleTypes:	     # know this type
+            if not self.articleTypes[article.type]:  # but don't want it
+                self.curReporter.skipWrongType(article)
                 return False
-        else:	# not seen this before. Report so we can decide if we want it
-            self.curReporter.newType(article)
+        else:	# not seen this type before. Report it and skip
+            self.curReporter.skipNewType(article)
             return False
+
         return True
     # ---------------------
 
     def _createOutputDir(self, journalName):
         """ create an output directory for this journalName
+            Currently, all PDFs for all journals are written to the same place
         """
         self.curOutputDir = self.basePath
 
