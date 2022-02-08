@@ -115,7 +115,10 @@ journals = [
     'Theranostics',
     'Transl Psychiatry',
     ]
-    
+
+# uncomment the next line for a shorter list for debugging
+#journals = journals[:5] + ['Dis Model Mech']
+
 # journals that have their content embargoed for a period of time. We need to search them according to their
 # respective time delays.  Each pair is journal title : number of months of delay.  Note that the 
 # number of months is an approximate time, as we approximate a number of days per month.  See monthsAgo()
