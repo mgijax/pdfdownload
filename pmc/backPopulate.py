@@ -751,11 +751,15 @@ class PMCfileRangler (object):
         debug('%s : searching...' % journalName)
         debug("%s : full query : %s" % (journalName, query.replace('+', ' ')))
 
-        count, results, webenvURLParams = eulib.getSearchResults("PMC",
+        try:
+            count, results, webenvURLParams = eulib.getSearchResults("PMC",
                                     query, op='fetch', retmax=maxFiles,
                                     URLReader=self.urlReader, debug=False )
-        # JIM: check for and do something about errors and empty search rslts?
-        #  (zero seems to work ok as is)
+        except Exception as e:
+            text = str(e)
+            progress("Exception: '%s'\n" % text)
+            count = 0
+            results = '<data></data>'   # empty data
 
         debug('%s : received %s results' % (journalName, count))
 
