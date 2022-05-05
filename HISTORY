@@ -1,3 +1,8 @@
+TAG: pdfdownload-6-0-19-1
+DATE: 05/05/2022
+STAFF: sc
+CHANGES: wts2-865 Elsevier/SciDirect PDF download error (for refs without a title)
+ 
 TAG: pdfdownload-6-0-18-3
 DATE: 2/08/2022
 STAFF: jak

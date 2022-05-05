@@ -63,6 +63,13 @@ There are automated tests for this module: # includes usage examples
     cd tests
     python test_SciDirectLib.py [-v]
 """
+#  History:
+#
+# 05/05/2022   sc
+#       wts2-865 - Elsevier/SciDirect PDF download error (for refs without a title)
+#       title missing from two papers - catch the key error/set to empty string
+#
+
 
 import json, time, os, logging
 import urllib.request
@@ -77,6 +84,7 @@ def get_logger(name):
     # create logger with module name
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
+
     # create log path, if not already there
     logPath = LOGDIR
     if not os.path.exists(logPath):
@@ -336,7 +344,7 @@ class SciDirectReference(object):
             searchResult = record/dict from SciDirectSearch results from the API
         """
         self._elsClient = elsClient
-
+        #print(searchResult)
         # unpack fields from SciDirectSearch results
         self._searchResultsFields = searchResult
         self._unpackSciDirectResult()
@@ -357,7 +365,10 @@ class SciDirectReference(object):
         self._pii             = self._searchResultsFields['pii']
         self._doi             = self._searchResultsFields['doi']
         self._journal         = self._searchResultsFields['sourceTitle']
-        self._title           = self._searchResultsFields['title']
+        try:
+            self._title           = self._searchResultsFields['title']
+        except:
+            self._title = ''
         self._loadDate        = self._searchResultsFields['loadDate']
         self._publicationDate = self._searchResultsFields['publicationDate']
 
