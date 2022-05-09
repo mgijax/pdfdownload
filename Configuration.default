@@ -25,6 +25,10 @@ export PDFDIR
 PDFDOWNLOADLOGDIR=${DATALOADSOUTPUT}/mgi/pdfdownload/logs
 export PDFDOWNLOADLOGDIR
 
+# only use for debugging
+#FIND_PDF_LOG=${PDFDOWNLOADLOGDIR}/findpdfintar.log
+#export FIND_PDF_LOG
+
 # number of days to look back to try to find articles we don't have yet
 WINDOW_SIZE=60
 export WINDOW_SIZE
