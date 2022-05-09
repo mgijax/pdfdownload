@@ -53,7 +53,7 @@ journals = [ 'PLOS ONE', 'PLOS Genetics', 'PLOS Biology']
 
 # URL for contacting PLOS to find articles (plug in journal name, start date, end date, start row, and 
 # max number of rows to return)
-baseUrl = 'http://api.plos.org/search?q=journal:"%s" AND (abstract:"mice" OR body:"mice" OR title:"mice") ' + \
+baseUrl = 'https://api.plos.org/search?q=journal:"%s" AND (abstract:"mice" OR body:"mice" OR title:"mice") ' + \
     'AND publication_date:[%sT00:00:00Z TO %sT00:00:00Z] AND issue:[* TO *] AND volume:[* TO *]' + \
     '&fl=id,journal,title,volume,issue,publication_date&wt=json&start=%d&rows=%d'
     
