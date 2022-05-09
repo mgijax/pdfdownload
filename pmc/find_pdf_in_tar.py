@@ -32,7 +32,6 @@ if len(sys.argv) > 1:
 ###################
 # initialize
 ###################
-
 if "FIND_PDF_LOG" in os.environ:
     logFP = open(os.environ["FIND_PDF_LOG"], 'a')
 else: logFP = None
@@ -55,6 +54,7 @@ main_re_string = '|'.join([
                     r'ncomms[0-9]+$',		# Nat Commun
                     r'onc[0-9]+a$',		# Oncogene
                     r'dmm[-_]*[0-9\-]+$',	# Dis_Model_Mech journal
+                    r'^omcl.*$',                # Oxid Med Cell Longev
                     ])
 
 #main_re_string = r'.*main$|nihms[-_]*[0-9]+$|.*article[-_]*[0-9]*$|ncomms[0-9]+$'
@@ -69,8 +69,24 @@ supp_re_string = '|'.join([
                     r'.*fig.*',
                     r'.*table.*',
                     r'.*video.*',
-                    r'bj.*add$',	# Biochem J add'l data files
+                    r'bj.*add$',             # Biochem J add'l data files
+                    r'.*review_history.*',    # Life Sci Alliance
+                    r'.*image.*',             # Front Pharmacol, Front Physiol)
+                    r'.*presentation.*',      # Front Immunol, 
+                                             # Front Endocrinol (Lausanne)
+                    r'.*transrepform.*',      # eLife 
+                    r'.*moesm.*',   # J Neuroinflammation, Nat Commun, 
+                                    # Scientific Reports, Transl Psychiatry 
+                                    # (could be others))
+                    r'.*sm$',       # Sciences Advances as "_sm.pdf, but as 
+                                    # specified would also match "_ESM.pdf", 
+                                    # which is found in many journals
+                    r'.*sapp$',     # PNAS
+                    r'.*sf[0-9]+$',  # mBio
+                    r'.*st[0-9]+$',  # mBio
+
                     ])
+
 #supp_re_string = r'.*sup.*|.*sd.*|.*s[0-9]+$|.*data.*|.*fig.*|.*table.*'
 supp_RE = re.compile(supp_re_string, re.IGNORECASE)
 
@@ -86,21 +102,23 @@ for line in sys.stdin.readlines():	# for line in tar output
 
     if l.endswith('.pdf'): pdfLines.append(l)
 
-
 pathNames = []				# all pdf pathnames
 numNonSuppPathNames = 0
+suppFiles = []
+
 for l in pdfLines:
     parts         = l.split()
     fileSize      = int(parts[fileSizePart])
     pathName      = parts[-1]	# last is the pathname in the tar file
     pathNames.append(pathName)
     baseFileName = os.path.basename(pathName).replace('.pdf', '')
-
+    
     if re.match(main_RE, baseFileName):	# should be main pdf
         mainPDFname = pathName
         reason = "m"			# we matched main PDF by name
         break
     if re.match(supp_RE, baseFileName):	# appears to be supp data pdf
+        suppFiles.append(baseFileName)
         continue
     if fileSize > maxPDFsize:		# dunno, remember longest file
         # maybe we should find shortest fileNAME rather than longest file?
@@ -113,14 +131,24 @@ for l in pdfLines:
         else:
             reason = "s"		# matched by file size
 
-if logFP:
+if logFP and len(pdfLines) > 1:
+    logFP.write("START\n")
+    logFP.write("pdfLines:\n")
+    for line in pdfLines:
+        logFP.write(line + '\n')
+
+    if len(suppFiles):
+        logFP.write("    appears to be supp data pdf: %s\n" % suppFiles)
     if mainPDFname != '':	# chose a pdf filename
         # log the full path of the selected pdf and the basenames of the others
         pathNames.remove(mainPDFname)
-        logFP.write("%s %s " % (reason,mainPDFname) )
+        logFP.write("\n%s %s\n " % (reason,mainPDFname) )
         logFP.write( " ".join(map(os.path.basename, pathNames)) + '\n')
 
     else:			# no pdf filename selected
         logFP.write("  %s no PDF selected\n" % dirPath)
+
+    
+    logFP.write("END\n\n")
 
 print(mainPDFname)
