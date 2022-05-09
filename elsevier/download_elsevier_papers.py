@@ -305,32 +305,36 @@ def parseParameters():
     # list of journals to process
     
     if sys.argv[-1] != '':
-        keep = []
-        for journal in journals:
-            if sys.argv[-1] == journal.mgiName:
-                keep.append(journal)
-                break
+        startDate = ''
+        stopDate = ''
+    # sc 5/9/22 - the rest of this was not working- you need both the short and long version of the journal
+    # see the journals list of Journal objects above.
+        #keep = []
+        #for journal in journals:
+        #    if sys.argv[-1] == journal.mgiName:
+        #        keep.append(journal)
+        #        break
 
-        if keep:
-            journals = keep
-            sys.argv = sys.argv[:-1]
+        #if keep:
+        #    journals = keep
+        #    sys.argv = sys.argv[:-1]
 
-    else:
-        # Empty string comes in if no journal specified; remove it and keep list of all journals as-is.
-        sys.argv = sys.argv[:-1]
+    #else:
+    #    # Empty string comes in if no journal specified; remove it and keep list of all journals as-is.
+    #    sys.argv = sys.argv[:-1]
         
-    if len(sys.argv) > 1:
-        if len(sys.argv) != 3:
-            bailout('Wrong number of parameters', True)
+    #if len(sys.argv) > 1:
+    #    if len(sys.argv) != 3:
+    #        bailout('Wrong number of parameters', True)
 
-        startDate = sys.argv[1].strip()
-        stopDate = sys.argv[2].strip()
+    #    startDate = sys.argv[1].strip()
+    #    stopDate = sys.argv[2].strip()
         
-        dateRE = re.compile('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
-        if not dateRE.match(startDate):
-            bailout('Invalid start date: %s' % startDate)
-        if not dateRE.match(stopDate):
-            bailout('Invalid stop date: %s' % stopDate)
+    #    dateRE = re.compile('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+    #    if not dateRE.match(startDate):
+    #        bailout('Invalid start date: %s' % startDate)
+    #    if not dateRE.match(stopDate):
+    #        bailout('Invalid stop date: %s' % stopDate)
             
     else:
         # 24 hours per day, 60 minutes per hour, 60 seconds per minute
@@ -552,29 +556,30 @@ def downloadPapers (journal, results, startDate, stopDate):
 ###--- main program ---###
 
 if __name__ == '__main__':
-    startDate, stopDate = parseParameters()
-    dateTracker = DateTracker(startDate, stopDate)
-    debug('Searching %d journal(s) from %s to %s' % (len(journals), startDate, stopDate), True)
+    startDate, stopDate = parseParameters() 
+    if startDate != '':
+        dateTracker = DateTracker(startDate, stopDate)
+        debug('Searching %d journal(s) from %s to %s' % (len(journals), startDate, stopDate), True)
 
-    for journal in journals:
-        journalStartTime = time.time()
-        results = searchJournal(journal, startDate, stopDate)
-        if results.getTotalNumResults() > 0:
-            downloadPapers(journal, results, startDate, stopDate)
+        for journal in journals:
+            journalStartTime = time.time()
+            results = searchJournal(journal, startDate, stopDate)
+            if results.getTotalNumResults() > 0:
+                downloadPapers(journal, results, startDate, stopDate)
 
-        elapsed = time.time() - journalStartTime
-        debug('finished %s in %0.2f sec' % (journal.elsevierName, elapsed))
+            elapsed = time.time() - journalStartTime
+            debug('finished %s in %0.2f sec' % (journal.elsevierName, elapsed))
 
-    pubDateCache.save()
-    debug('-- wrote %d entries to cache file: %s' % (pubDateCache.size(), pubDateCache.getPath()))
+        pubDateCache.save()
+        debug('-- wrote %d entries to cache file: %s' % (pubDateCache.size(), pubDateCache.getPath()))
 
-    pmidCache.save()
-    debug('-- wrote %d entries to cache file: %s' % (pmidCache.size(), pmidCache.getPath()))
+        pmidCache.save()
+        debug('-- wrote %d entries to cache file: %s' % (pmidCache.size(), pmidCache.getPath()))
 
-    pubTypeCache.save()
-    debug('-- wrote %d entries to cache file: %s' % (pubTypeCache.size(), pubTypeCache.getPath()))
+        pubTypeCache.save()
+        debug('-- wrote %d entries to cache file: %s' % (pubTypeCache.size(), pubTypeCache.getPath()))
 
-    dateTracker.report()
+        dateTracker.report()
 
-    if DIAG_LOG:
-        DIAG_LOG.close()
+        if DIAG_LOG:
+            DIAG_LOG.close()
