@@ -9,6 +9,12 @@
 cd `dirname $0`
 . ./Configuration
 
+# remove the find pdf debug log if it is defined and it exists
+if [[ -f ${FIND_PDF_LOG} ]]; then
+        echo  "FIND_PDF_LOG: ${FIND_PDF_LOG}"
+        rm ${FIND_PDF_LOG}
+fi
+
 # if we don't have a log directory, create one
 if [ ! -d ${PDFDOWNLOADLOGDIR} ]; then
 	mkdir ${PDFDOWNLOADLOGDIR}
