@@ -11,7 +11,6 @@ cd `dirname $0`
 
 # remove the find pdf debug log if it is defined and it exists
 if [[ -f ${FIND_PDF_LOG} ]]; then
-        echo  "FIND_PDF_LOG: ${FIND_PDF_LOG}"
         rm ${FIND_PDF_LOG}
 fi
 
