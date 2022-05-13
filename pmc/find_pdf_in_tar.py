@@ -55,6 +55,7 @@ main_re_string = '|'.join([
                     r'onc[0-9]+a$',		# Oncogene
                     r'dmm[-_]*[0-9\-]+$',	# Dis_Model_Mech journal
                     r'^omcl.*$',                # Oxid Med Cell Longev
+                    r'^bmri.*$',                # Biomed Res Int
                     ])
 
 #main_re_string = r'.*main$|nihms[-_]*[0-9]+$|.*article[-_]*[0-9]*$|ncomms[0-9]+$'
@@ -84,7 +85,7 @@ supp_re_string = '|'.join([
                     r'.*sapp$',     # PNAS
                     r'.*sf[0-9]+$',  # mBio
                     r'.*st[0-9]+$',  # mBio
-
+                    r'.*\.f[0-9]+$', # Biomed Res Int
                     ])
 
 #supp_re_string = r'.*sup.*|.*sd.*|.*s[0-9]+$|.*data.*|.*fig.*|.*table.*'
