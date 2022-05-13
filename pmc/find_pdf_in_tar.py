@@ -134,17 +134,14 @@ for l in pdfLines:
 
 if logFP and len(pdfLines) > 1:
     logFP.write("START\n")
-    logFP.write("pdfLines:\n")
+    logFP.write("PDFs in the gzipped file:\n")
     for line in pdfLines:
         logFP.write(line + '\n')
 
-    if len(suppFiles):
-        logFP.write("    appears to be supp data pdf: %s\n" % suppFiles)
     if mainPDFname != '':	# chose a pdf filename
         # log the full path of the selected pdf and the basenames of the others
         pathNames.remove(mainPDFname)
         logFP.write("\n%s %s\n " % (reason,mainPDFname) )
-        logFP.write( " ".join(map(os.path.basename, pathNames)) + '\n')
 
     else:			# no pdf filename selected
         logFP.write("  %s no PDF selected\n" % dirPath)
