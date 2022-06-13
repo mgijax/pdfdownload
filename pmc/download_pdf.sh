@@ -54,7 +54,11 @@ fi
 # download the file into the directory
 
 /usr/bin/curl $1 > ${directory}/${filename}
-exitIfFailed $? "curl failed"
+if [ $? -ne 0 ]; then
+      echo "curl failed removing: ${directory}/${filename}"
+      rm -rf ${directory}/${filename}
+      exitIfFailed $? "curl failed"
+fi
 
 # If we downloaded a tarred, gzipped file (rather than a PDF), there's more
 # work to do...
@@ -73,6 +77,13 @@ if [ "${suffix}" == "gz" ]; then
 
 	gunzip -f ${directory}/${filename}
 	exitIfFailed $? "failed to unzip file"
+
+        if [ $? -ne 0 ]; then
+              ret=$?
+              #echo "before rm failed to unzip: ${directory}/${filename}"
+              rm -f ${directory}/${filename}
+              exitIfFailed ret "failed to unzip file ${directory}/${filename}"
+        fi
 
 	# convert the filename from the gzipped name to just the *tar name
 	filename=`echo ${filename} | sed 's/.gz$//'`
