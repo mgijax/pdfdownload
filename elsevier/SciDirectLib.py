@@ -168,9 +168,10 @@ class ElsClient(object):
         req = urllib.request.Request(URL)
         for (key, value) in list(headers.items()):
             req.add_header(key, value)
-        
-        res = urllib.request.urlopen(req)
-
+        try: 
+            res = urllib.request.urlopen(req)
+        except:
+            print('urllib request failed. URL: %s' % URL) 
         self.__ts_last_req = time.time()
         self._status_code=res.code
 
@@ -181,7 +182,7 @@ class ElsClient(object):
                                 " using headers " + str(headers) + \
                                 ":\n" + res.read()
             logger.info(self._status_msg)       # logger.error() instead?
-            raise urllib.HTTPError(self._status_msg)
+            #raise urllib.HTTPError(self._status_msg)
 
         ## Success
         self._status_msg='%s data retrieved' % contentType

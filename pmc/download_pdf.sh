@@ -76,7 +76,7 @@ if [ "${suffix}" == "gz" ]; then
 	# 5. remove the now-empty directory and the tar file
 
 	gunzip -f ${directory}/${filename}
-	exitIfFailed $? "failed to unzip file"
+	#exitIfFailed $? "failed to unzip file"
 
         if [ $? -ne 0 ]; then
               ret=$?
