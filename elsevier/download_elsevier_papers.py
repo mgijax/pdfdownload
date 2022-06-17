@@ -154,23 +154,21 @@ journals = [
     Journal('Neurosci Res', 'Neuroscience Research'),
     Journal('Neuroscience', 'Neuroscience'),
     Journal('Semin Cancer Biol', 'Seminars in Cancer Biology'),
+    Journal('Am J Hum Genet', 'The American Journal of Human Genetics'),
+    Journal('Cancer Cell', 'Cancer Cell'),
+    Journal('Cell', 'Cell'),
+    Journal('Cell Host Microbe', 'Cell Host & Microbe'),
+    Journal('Cell Metab', 'Cell Metabolism'),
+    Journal('Cell Rep', 'Cell Reports'),
+    Journal('Cell Stem Cell', 'Cell Stem Cell'),
+    Journal('Cells Dev', 'Cells & Development'),
+    Journal('Dev Biol', 'Developmental Biology'),
+    Journal('Dev Cell', 'Developmental Cell'),
+    Journal('Gene Expr Patterns', 'Gene Expression Patterns'),
+    Journal('Immunity', 'Immunity'),
+    Journal('Mol Cell', 'Molecular Cell'),
+    Journal('Neuron', 'Neuron'),
    ]
-
-# Journals that have been pulled out to be hand-triaged for now.  We may re-evaluate later and pull them
-# back into the automated downloads:
-#    Journal('Am J Hum Genet', 'The American Journal of Human Genetics'),
-#    Journal('Cancer Cell', 'Cancer Cell'),
-#    Journal('Cell', 'Cell'),
-#    Journal('Cell Host Microbe', 'Cell Host & Microbe'),
-#    Journal('Cell Rep', 'Cell Reports'),
-#    Journal('Cell Stem Cell', 'Cell Stem Cell'),
-#    Journal('Cells Dev', 'Cells & Development'),
-#    Journal('Dev Biol', 'Developmental Biology'),
-#    Journal('Dev Cell', 'Developmental Cell'),
-#    Journal('Gene Expr Patterns', 'Gene Expression Patterns'),
-#    Journal('Immunity', 'Immunity'),
-#    Journal('Mol Cell', 'Molecular Cell'),
-#    Journal('Neuron', 'Neuron'),
 
 # Used to collect and report debugging info related to date handling
 class DateTracker:
