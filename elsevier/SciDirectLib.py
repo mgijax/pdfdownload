@@ -171,7 +171,8 @@ class ElsClient(object):
         try: 
             res = urllib.request.urlopen(req)
         except:
-            print('urllib request failed. URL: %s' % URL) 
+            print('issue completing urllib.request.urlopen(req) for URL: %s' % URL) 
+            return 1
         self.__ts_last_req = time.time()
         self._status_code=res.code
 
@@ -412,7 +413,9 @@ class SciDirectReference(object):
             # This URL just gets meta info and has a smaller payload
             url = url_base + 'content/article/pii/%s?view=META' % str(self._pii)
             response = self._elsClient.execGetRequest(url)
-
+            if response == 1: # execGetRequest returns 1 if fails
+                print('issue completing execGetRequest for URL: %s' % URL)
+                return
             # TODO: should we dump json output somewhere for debugging?
             r = response['full-text-retrieval-response']
             #print(json.dumps(response, sort_keys=True, indent="  "))
