@@ -55,9 +55,9 @@ fi
 
 /usr/bin/curl $1 > ${directory}/${filename}
 if [ $? -ne 0 ]; then
-      echo "curl failed removing: ${directory}/${filename}"
+      #echo "curl failed, removing: ${directory}/${filename}"
       rm -rf ${directory}/${filename}
-      exitIfFailed $? "curl failed"
+      exitIfFailed $? "curl did not complete, removing ${directory}/${filename}"
 fi
 
 # If we downloaded a tarred, gzipped file (rather than a PDF), there's more

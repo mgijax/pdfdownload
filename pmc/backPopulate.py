@@ -972,10 +972,12 @@ def checkPdfCmd(cmd,	# the command itself (as argv list)
         Return true if all ok.
     """
     if retcode != 0:
-        progress("Error on pdf download\n")
+        progress("Issue running pdf download\n")
         progress("retcode %d on: '%s'\n" % (retcode, " ".join(cmd) ))
-        if stdout[0] == "Error: no PDF found in gzip file\n":
-            progress("stdout from cmd: Error: no PDF found in gzip file\n")
+        if stdout[0] == "Error: no PDF found in gzip file\n": 
+            progress("stdout from cmd: Issue: no PDF found in gzip file\n")
+        elif stdout[0].find('curl did not complete') != -1:
+            progress('curl did not complete, gzip file removed')
         else:
             progress("stdout from cmd: '%s'\n" % stdout)
             progress("stderr from cmd: '%s'\n" % stderr)
