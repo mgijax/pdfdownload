@@ -1,3 +1,13 @@
+TAG: pdfdownload-6-0-19-11
+DATE: 06/30/2022
+STAFF: sc
+CHANGES: https://mgi-jira.atlassian.net/browse/WTS2-917 
+        pdfdownload throwing yet another python Traceback
+        appears some of the papers in the  new journals added
+        do not have publication dates. Added testing for None
+        in download_elsevier_papers.py
+
+TAG: pdfdownload-6-0-19-10
 TAG: pdfdownload-6-0-19-9
 TAG: pdfdownload-6-0-19-8
 DATE: 06/17/2022

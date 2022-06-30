@@ -168,7 +168,7 @@ journals = [
     Journal('Immunity', 'Immunity'),
     Journal('Mol Cell', 'Molecular Cell'),
     Journal('Neuron', 'Neuron'),
-   ]
+    ]
 
 # Used to collect and report debugging info related to date handling
 class DateTracker:
@@ -449,7 +449,8 @@ def downloadPapers (journal, results, startDate, stopDate):
                 pmRef = pmAgent.getReferenceInfo(pmid)
                 if pmRef != None:
                     publicationDates[pmid] = getStandardDateFormat(pmRef.getDate())
-                    pubDateCache.put(pmid, publicationDates[pmid])
+                    if publicationDates[pmid] != None:
+                        pubDateCache.put(pmid, publicationDates[pmid])
                     dateTracker.track(journal.elsevierName, pmRef.getDate(), publicationDates[pmid])
         else:
 # Uncomment this to collect info on pii IDs (internal to SciDirect) that cannot be mapped to PubMed IDs.
