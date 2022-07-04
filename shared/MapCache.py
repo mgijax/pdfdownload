@@ -43,7 +43,7 @@ class MapCache:
         strings = list(self.contents.keys()) + list(self.contents.values())
         delim = ''
         match = True
-        
+        print('strings these are a list of keys and values from the cache: %s' % strings)
         # Until we find a delimiter that matches nothing in 'strings', keep going.
         while match:
 
