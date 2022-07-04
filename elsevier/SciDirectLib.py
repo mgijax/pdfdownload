@@ -415,6 +415,10 @@ class SciDirectReference(object):
             response = self._elsClient.execGetRequest(url)
             if response == 1: # execGetRequest returns 1 if fails
                 print('issue completing execGetRequest for url: %s' % url)
+                self._pmid     = 'no PMID'
+                self._pubType  = 'no pubType'
+                self._volume   = 'no volume'
+
                 return
             # TODO: should we dump json output somewhere for debugging?
             r = response['full-text-retrieval-response']
