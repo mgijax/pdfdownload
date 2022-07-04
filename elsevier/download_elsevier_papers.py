@@ -6,8 +6,11 @@
 #    2. Destination folder of PDFs is pulled from configuration.
 #    3. The SciDirect API does not allow an end date when searching by date, only a start date.  So, if we are to implement
 #        an end date, we'll need to do that in code in this script.
+# HISTORY
+#
+# sc    07/04/2022 - Added print statements (commented out in tag) to view
+#       contents of the three caches
 
-import sys
 sys.path.insert(0, '../shared')
 
 import os
@@ -439,7 +442,9 @@ def downloadPapers (journal, results, startDate, stopDate):
             pmid = pmidCache.get(r.getPii())
         else:
             pmid = r.getPmid()
+            
             if pmid != 'no PMID':
+                #print('pmidCache put1 pimid: %s pii: %s' % (pmid, r.getPii()))
                 pmidCache.put(r.getPii(), pmid)
 
         if pmid != 'no PMID':
@@ -449,6 +454,7 @@ def downloadPapers (journal, results, startDate, stopDate):
                 pmRef = pmAgent.getReferenceInfo(pmid)
                 if pmRef != None:
                     publicationDates[pmid] = getStandardDateFormat(pmRef.getDate())
+                    #print('journal.mgiName: %s pmid: %s publicationDates[pmid]: %s' % (journal.mgiName, pmid, publicationDates[pmid]))
                     if publicationDates[pmid] != None:
                         pubDateCache.put(pmid, publicationDates[pmid])
                     dateTracker.track(journal.elsevierName, pmRef.getDate(), publicationDates[pmid])
@@ -488,6 +494,7 @@ def downloadPapers (journal, results, startDate, stopDate):
         else:
             pmid = r.getPmid()
             if pmid != 'no PMID':
+                #print('pmidCache put2 pmid: %s pii: %s' % (pmid, pii))
                 pmidCache.put(pii, pmid)
 
         # skip any papers we already have in the database
@@ -502,6 +509,7 @@ def downloadPapers (journal, results, startDate, stopDate):
             pubType = pubTypeCache.get(pmid)
         else:
             pubType = r.getPubType()
+            #print('pubTypeCache put pmid: %s pubType: %s' % (pmid,pubType)) 
             pubTypeCache.put(pmid, pubType)
         
         try:
@@ -569,12 +577,15 @@ if __name__ == '__main__':
             elapsed = time.time() - journalStartTime
             debug('finished %s in %0.2f sec' % (journal.elsevierName, elapsed))
 
+        print(' pubDateCache.save()')
         pubDateCache.save()
         debug('-- wrote %d entries to cache file: %s' % (pubDateCache.size(), pubDateCache.getPath()))
 
+        print('pmidCache.save()')
         pmidCache.save()
         debug('-- wrote %d entries to cache file: %s' % (pmidCache.size(), pmidCache.getPath()))
 
+        print('pubTypeCache.save()')
         pubTypeCache.save()
         debug('-- wrote %d entries to cache file: %s' % (pubTypeCache.size(), pubTypeCache.getPath()))
 
