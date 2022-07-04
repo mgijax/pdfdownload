@@ -11,6 +11,7 @@
 # sc    07/04/2022 - Added print statements (commented out in tag) to view
 #       contents of the three caches
 
+import sys
 sys.path.insert(0, '../shared')
 
 import os
