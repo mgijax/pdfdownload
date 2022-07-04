@@ -1,3 +1,11 @@
+TAG: pdfdownload-6-0-19-12
+DATE: 07/04/2022
+STAFF: sc
+wts2-197 - 
+    elsevier/SciDirectLib.py - set self.: _pmid, _pubType, _volume to "no" when execGetRequest returns 1
+    shared/MapCache.py and elsevier/download_elsevier_papers.py added some debug, some commented out
+        some not
+
 TAG: pdfdownload-6-0-19-11
 DATE: 06/30/2022
 STAFF: sc
