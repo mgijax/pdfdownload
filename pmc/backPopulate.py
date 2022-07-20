@@ -834,6 +834,7 @@ class PMCfileRangler (object):
         for i in range(len(self.cmds)):
             idx = self.cmdIndexes[i]
             article = self.articles[i]
+            debug('PMID_%s.pdf' % article.pmid)
             gotFile = checkPdfCmd( self.cmds[i],
                                     self.dispatcher.getReturnCode(idx),
                                     self.dispatcher.getStdout(idx),
