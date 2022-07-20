@@ -1,6 +1,6 @@
 #!/usr/bin/sh
 
-# Usage:  download_papers.csh
+# Usage:  download_papers.sh
 #
 # History
 #
@@ -50,8 +50,8 @@ cd ${CWD}
 date | tee -a ${LOG}
 
 # mail the two noPdf logs to Nancy for manual processing
-
 if [ "${MAIL_LOG_CUR}" != "" ]; then
+    if [ `hostname` = "bhmgiapp01.jax.org" ]; then
 	for i in `echo ${MAIL_LOG_CUR} | sed 's/,/ /g'`
 	do
 		if [ -f ${PDFDOWNLOADLOGDIR}/noPdfs.log ]; then
@@ -66,4 +66,5 @@ if [ "${MAIL_LOG_CUR}" != "" ]; then
 			echo "No ${PDFDOWNLOADLOGDIR}/embargoedNoPdfs.log to email" | tee -a ${LOG}
 		fi
 	done
+    fi
 fi
