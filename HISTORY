@@ -1,4 +1,11 @@
-TAG: pdfdownload-6-0-20-1
+TAG: pdfdownload-6-0-21-1
+DATE: 07/20/2022
+STAFF: sc
+wts2-941 - add journals to pmc/download_pmc_papers.py, also move/remove, see TR
+Also: only send noPDFs log email to Nancy if running on prod
+Also: logging pdf file name to pmc.diag.log (as is done for elsevier)
+
+TAG: pdfdownload-6-0-20-13
 TAG: pdfdownload-6-0-19-12
 DATE: 07/04/2022
 STAFF: sc
