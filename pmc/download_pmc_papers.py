@@ -12,11 +12,18 @@
 #    all relevant papers eventually.
 #
 # Implementation history
+#
+# 7/20/2022 - sc
+#       https://mgi-jira.atlassian.net/browse/WTS2-941
+#       See ticket for journals added.
+#
 # 5/11/20 - jak
 #       TR13204 conversion to python 3.7
+#
 # 10/23/18 - jsb
-#    updated to pull in six new journals' papers and to handle PLOS papers the same way
-#    (rather than querying the PLOS site itself)
+#       updated to pull in six new journals' papers and to handle PLOS 
+#       papers the same way (rather than querying the PLOS site itself)
+#
 # 12/5/17 - sc
 #	TR12737 removed PLOS Pathogens
 
@@ -52,14 +59,19 @@ caches.initialize(os.environ['MGI_PUBLICUSER'], os.environ['MGI_PUBLICPASSWORD']
 # which journals do we want to search?  (All are immediate, open-access.  Embargoed journals are below.)
 journals = [
     'Acta Neuropathol Commun',
+    'Aging (Albany NY)',
     'Aging Cell',
     'Biol Open',
     'Biomed Res Int',
     'Biomolecules',
     'Biosci Rep',
+    'Blood Adv',
+    'BMC Biol',
     'BMC Genomics',
     'BMC Res Notes',
     'Cancer Sci',
+    'Cancers (Basel)',
+    'Cell Commun Signal',
     'Cell Death Dis',
     'Cell Mol Gastroenterol Hepatol',
     'Cells',
@@ -85,23 +97,32 @@ journals = [
     'Front Pharmacol',
     'Front Physiol',
     'G3 (Bethesda)',
+    'Genes (Basel)', 
     'Haematologica',
     'Int J Biol Sci',
     'Int J Mol Sci',
+    'Invest Ophthalmol Vis Sci',
     'iScience',
     'J Am Heart Assoc',
     'J Biol Chem',
     'J Cell Mol Med',
+    'J Lipid Res',
+    'J Mol Cell Biol',
     'J Neuroinflammation',
+    'J Reprod Dev',
     'JCI Insight',
     'Life Sci Alliance',
     'mBio',
+    'Mol Autism',
     'Mol Brain',
     'Mol Metab',
     'Mol Neurodegener',
     'Nat Commun',
     'Neural Dev',
     'Nucleic Acids Res', 
+    'Nutrients',
+    'Invest Ophthalmol Vis Sci',
+    'Oncotarget',
     'Oxid Med Cell Longev',
     'Physiol Rep',
     'PLOS Biology',
@@ -111,11 +132,11 @@ journals = [
     'Redox Biol',
     'Sci Adv',
     'Sci Rep',
+    'Skelet Muscle',
     'Stem Cell Reports',
     'Theranostics',
     'Transl Psychiatry',
     ]
-
 # uncomment the next line for a shorter list for debugging
 #journals = journals[:5] + ['Dis Model Mech']
 
@@ -124,22 +145,25 @@ journals = [
 # number of months is an approximate time, as we approximate a number of days per month.  See monthsAgo()
 # function for details.
 embargoedJournalDelays = {
+    'Am J Respir Cell Mol Biol' : 12,
     'Autophagy' : 12,
     'Cardiovasc Res' : 12,
     'Cell Death Differ' : 12,
     'Cereb Cortex' : 12,
+    'Diabetes' : 12,
     'EMBO J' : 12,
     'EMBO Rep' : 12,
-    'Immunology' : 12,
+    'Genes Dev' : 6,
+    'J Am Soc Nephrol' : 12,
     'J Cell Biol' : 6,
     'J Clin Invest' : 3,
     'J Exp Med' : 6,
-    'J Lipid Res' : 12,
     'J Neurosci' : 6,
+    'J Virol' : 6,
+    'Mol Biol Cell' : 3,
     'Mol Cell Biol' : 6,
     'Proc Natl Acad Sci U S A' : 6,
     }
-
 embargoedJournals = list(embargoedJournalDelays.keys())
 embargoedJournals.sort()
 
