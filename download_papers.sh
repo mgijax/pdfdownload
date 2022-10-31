@@ -51,7 +51,7 @@ date | tee -a ${LOG}
 
 # mail the two noPdf logs to Nancy for manual processing
 if [ "${MAIL_LOG_CUR}" != "" ]; then
-    if [ `hostname` = "bhmgiapp01.jax.org" ]; then
+    if [ `hostname` = "bhmgiapp01" ]; then
 	for i in `echo ${MAIL_LOG_CUR} | sed 's/,/ /g'`
 	do
 		if [ -f ${PDFDOWNLOADLOGDIR}/noPdfs.log ]; then
