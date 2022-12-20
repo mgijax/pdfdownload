@@ -79,7 +79,6 @@ journals = [
     'Commun Biol',
     'Dis Model Mech',
     'EBioMedicine',
-    'eLife',
     'EMBO Mol Med',
     'eNeuro',
     'Exp Anim',

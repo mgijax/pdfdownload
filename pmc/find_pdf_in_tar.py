@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+#
+# 12/15/22 - sc
+# removed eLife supplemental regex as removing it from download
+#
 # 5/11/2020 - jak
 #       TR13204 conversion to python 3.7
 # copied from autolittriage product -- jsb, 10/23/2018
@@ -75,7 +79,6 @@ supp_re_string = '|'.join([
                     r'.*image.*',             # Front Pharmacol, Front Physiol)
                     r'.*presentation.*',      # Front Immunol, 
                                              # Front Endocrinol (Lausanne)
-                    r'.*transrepform.*',      # eLife 
                     r'.*moesm.*',   # J Neuroinflammation, Nat Commun, 
                                     # Scientific Reports, Transl Psychiatry 
                                     # (could be others))
