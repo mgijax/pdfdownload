@@ -141,6 +141,9 @@ def debug(s, flush = True):
         if not DIAG_LOG:
             DIAG_LOG = open(os.path.join(PDF_LOG_DIR, 'pmc.diag.log'), 'w')
         DIAG_LOG.write(s + '\n')
+        # if you want to print something that is in bytes, like the xml results, 
+        # comment out above and uncomment below
+        #DIAG_LOG.write(results.decode('UTF-8'))
         if flush:
             DIAG_LOG.flush()
 
@@ -741,6 +744,7 @@ class PMCfileRangler (object):
             Return count of articles, ElementTree, and raw result text
                 of PMC search results.
         """
+
         query = '"%s"[TA]+AND+%s' % (journalName, searchParams,)
         query = query.replace(' ','+')
         
@@ -798,17 +802,33 @@ class PMCfileRangler (object):
             pubDate = artMetaE.find("pub-date/[@pub-type='epub']")
             if not pubDate:
                 pubDate = artMetaE.find("pub-date")
+            # 2/15/23 old code:
+            #if pubDate:
+            #    if (pubDate.find('day') != None):
+            #        art.date = '%s/%s/%s' % (pubDate.find('year').text,
+            #                        pubDate.find('month').text.rjust(2,'0'),
+            #                        pubDate.find('day').text.rjust(2,'0'))
+            #    else:
+            #        art.date = '%s/%s/01' % (pubDate.find('year').text,
+            #                        pubDate.find('month').text.rjust(2,'0'))
+            #else:
+            #    art.date = '-'
+
+            # 2/15/23 new code WTS2-1122
             if pubDate:
+                day = '-'
+                month = '-'
+                year = '-'
                 if (pubDate.find('day') != None):
-                    art.date = '%s/%s/%s' % (pubDate.find('year').text,
-                                    pubDate.find('month').text.rjust(2,'0'),
-                                    pubDate.find('day').text.rjust(2,'0'))
-                else:
-                    art.date = '%s/%s/01' % (pubDate.find('year').text,
-                                    pubDate.find('month').text.rjust(2,'0'))
+                    day = pubDate.find('day').text.rjust(2,'0')
+                if (pubDate.find('month') != None):
+                    month = pubDate.find('month').text.rjust(2,'0')
+                if (pubDate.find('year') != None):
+                    year = pubDate.find('year').text
+                art.date = '%s/%s/%s' % (year, month, day)
             else:
                 art.date = '-'
-            
+ 
             art.pmcid  = artMetaE.find("article-id/[@pub-id-type='pmc']").text
 
             art.pmid   = artMetaE.find("article-id/[@pub-id-type='pmid']")
