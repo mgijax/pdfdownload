@@ -761,7 +761,7 @@ class PMCfileRangler (object):
                                     URLReader=self.urlReader, debug=False )
         except Exception as e:
             text = str(e)
-            progress("Exception: '%s'\n" % text)
+            progress("Warning: '%s'\n" % text)
             count = 0
             results = '<data></data>'   # empty data
 
