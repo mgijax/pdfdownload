@@ -140,7 +140,7 @@ def debug(s, flush = True):
     if DEBUG:
         if not DIAG_LOG:
             DIAG_LOG = open(os.path.join(PDF_LOG_DIR, 'pmc.diag.log'), 'w')
-        DIAG_LOG.write(s + '\n')
+        DIAG_LOG.write('%s\n' % s)
         # if you want to print something that is in bytes, like the xml results, 
         # comment out above and uncomment below
         #DIAG_LOG.write(results.decode('UTF-8'))
@@ -529,16 +529,18 @@ class NoPdfWriter (object):
         articlesOther = []          # list of articles from other journals
         for reporter in self.reporters:
             journal = reporter.journal
+            #debug('journal: %s' % journal)
             startDate = self.dateRanges[journal].split(':')[0]
             startDate = startDate.replace('/', '-')
             startDate = date.fromisoformat(startDate) # for this journal
 
             for article in reporter.getArticlesWithNoPdfs():
+                #debug('article.pmcid: %s' % article.pmcid)
                 if not article.pmcid:   # should never happen
                     article.pmcid = '-'
                 if not article.pmid:    # shouldn't happen now we only get
                     article.pmid = '-'  #   papers w/ PMIDs
-
+                #debug('article.date: %s' % article.date)
                 if not article.date:
                     article.date = '-'
                     article.numWeeks = 0
@@ -769,6 +771,10 @@ class PMCfileRangler (object):
 
         #if self.verbose: progress( "'%s': %d PMC articles\n" % (query, count))
 
+        # uncomment to get the xml from each journal - may want to limit the 
+        # journal list when debugging
+        #debug('results: %s' % results)
+
         resultsE = ET.fromstring(results)
         return count, resultsE, results
     # ---------------------
@@ -796,12 +802,16 @@ class PMCfileRangler (object):
             art = PMCarticle()
             art.journal = journalName
             art.type = artE.attrib['article-type']
-
+            #debug('art.type: %s' % art.type)
             artMetaE = artE.find("front/article-meta")
-
+            debug('pmcid: %s' %  artMetaE.find("article-id/[@pub-id-type='pmc']").text)
             pubDate = artMetaE.find("pub-date/[@pub-type='epub']")
             if not pubDate:
+                pubDate = artMetaE.find('pub-date/[@date-type="pub"]')
+                debug('no pubDate try again artMetaE.find(pub-date/[@date-type="pub"]): %s' % pubDate)
+            if not pubDate:
                 pubDate = artMetaE.find("pub-date")
+                debug('no pubDate try again artMetaE.find("pub-date"): %s' % pubDate)
             # 2/15/23 old code:
             #if pubDate:
             #    if (pubDate.find('day') != None):
@@ -821,6 +831,7 @@ class PMCfileRangler (object):
                 year = '-'
                 if (pubDate.find('day') != None):
                     day = pubDate.find('day').text.rjust(2,'0')
+                    
                 if (pubDate.find('month') != None):
                     month = pubDate.find('month').text.rjust(2,'0')
                 if (pubDate.find('year') != None):
