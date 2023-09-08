@@ -1,3 +1,10 @@
+TAG: pdfdownload-6-0-22-3
+DATE: 09/xxi0815/2023
+STAFF: sc
+wts2-1269/fl2-506
+Add another way to get publication date because some coming through w/o complete date:
+k pubDate = artMetaE.find('pub-date/[@date-type="pub"]')
+
 TAG: pdfdownload-6-0-22-2
 TAG: pdfdownload-6-0-22-1
 DATE: 02/15/2023
