@@ -1,3 +1,12 @@
+TAG: pdfdownload-6-0-23-1
+DATE: 02/06/2024
+STAFF: lec
+wts2-1397/fl2-731/Migration to Rocky OS/backend/data loads
+remove hard-coded python
+#       modified:   pmc/download_pmc_papers.py
+#       modified:   pmc/find_pdf_in_tar.py
+#       modified:   pmc/identify_missed_papers_plos.py
+
 TAG: pdfdownload-6-0-22-3
 DATE: 09/xxi0815/2023
 STAFF: sc

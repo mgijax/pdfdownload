@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # Name: download_papers.py
 # Purpose: Download PDFs from PubMed Central for the preceding sixty days.  This includes papers where:
 #   1. title, abstract, or body contain "mice"

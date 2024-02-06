@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # Name: identify_missed_papers_plos.py
 # Purpose: Identify DOI IDs from PLOS that have passed our sixty day window and need manual attention.
 #   This includes papers we would normally like to bring in, because they have these attributes:

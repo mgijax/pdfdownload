@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 #
 # 12/15/22 - sc
 # removed eLife supplemental regex as removing it from download
