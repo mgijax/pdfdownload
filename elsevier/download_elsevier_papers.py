@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # Name: download_elsevier_papers.py
 # Purpose: download PDF papers for the preceding 60 days for a set of selected journals from Elsevier's SciDirect collection
 # Notes: 1. based on work in the MGIJax/elsevier_client GitHub product

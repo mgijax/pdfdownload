@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 These are tests for SciDirectLib.py
 
