@@ -97,6 +97,8 @@ monthMap = {
     'Oct' : ('10', '31'),
     'Nov' : ('11', '30'),
     'Dec' : ('12', '31'),
+    'Sum' : ('06', '21'),
+    'Spr' : ('03', '21'),
     }
 
 pmDate1 = re.compile('([0-9]{4}) ([A-Z][a-z]{2})[-]([A-Z][a-z]{2})')    # e.g. - 2021 Jan-Jul
@@ -171,7 +173,6 @@ journals = [
     Journal('Mol Cell', 'Molecular Cell'),
     Journal('Neuron', 'Neuron'),
     ]
-
 # Used to collect and report debugging info related to date handling
 class DateTracker:
     # values for 'date format' -- what sort of date format was received?
@@ -339,7 +340,7 @@ def parseParameters():
     else:
         # 24 hours per day, 60 minutes per hour, 60 seconds per minute
         startDate = time.strftime("%Y-%m-%d", time.localtime(time.time() - windowSize * 24 * 60 * 60))
-        
+
         # Default behavior is now to bring in any papers with a publication date and a PubMed ID, even
         # if they're scheduled for future publication.  Easiest way to get future papers with our existing
         # setup is just to be generous in picking a future end date.  (say, 3 years for now)
@@ -406,7 +407,10 @@ def getStandardDateFormat(pmd):
             match3 = pmDate3.match(pmd)
             if match3:
                 yyyy = match3.group(1)
-                mm, dd = monthMap[match3.group(2)]
+                if match3.group(2) not in monthMap:
+                    mm, dd = ('01', '01') 
+                else:
+                    mm, dd = monthMap[match3.group(2)]
     
     return '%s-%s-%s' % (yyyy, mm, dd)
     
