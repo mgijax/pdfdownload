@@ -762,8 +762,8 @@ class PMCfileRangler (object):
                                     query, op='fetch', retmax=maxFiles,
                                     URLReader=self.urlReader, debug=False )
         except Exception as e:
-            text = str(e)
-            progress("Warning: '%s'\n" % text)
+            #text = str(e)
+            #progress("eulib.getSearchResults issue/ignore: '%s'\n" % text)
             count = 0
             results = '<data></data>'   # empty data
 
