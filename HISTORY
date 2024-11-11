@@ -2,6 +2,15 @@ TAG: pdfdownload-6-0-23-6
 TAG: pdfdownload-6-0-23-5
 DATE: 05/01/2024
 STAFF: lec
+wts2-1574/e4g-64/Run PDF Download/Elsevier HTTP error
+https://dev.elsevier.com/api_key_settings.html
+__min_req_interval = 6
+#       modified:   elsevier/SciDirectLib.py
+
+TAG: pdfdownload-6-0-23-6
+TAG: pdfdownload-6-0-23-5
+DATE: 05/01/2024
+STAFF: lec
 wts2-1467/fl2-847/pdf download trackback error/elsevier
 comment out: pmc/backPopulate.py/#progress("Warning: '%s'\n" % text)
 curous to see what happens:  HISTORICAL_WINDOW_SIZE = 240 -> 90
