@@ -126,7 +126,7 @@ class ElsClient(object):
     """ See class overview above
     """
     __user_agent = "MGI-SciDirectClient"
-    __min_req_interval = 1        ## min num seconds between requests
+    __min_req_interval = 6        ## min num seconds between requests
                                   ## got RATE_LIMIT_EXCEEDED when I used 0.5
     __ts_last_req = 0.0           ## time of the last request (in sec)
  
