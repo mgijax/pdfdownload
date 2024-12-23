@@ -115,7 +115,6 @@ journals = [
     'Mol Metab',
     'Mol Neurodegener',
     'Nat Commun',
-    'Neural Dev',
     'Nucleic Acids Res', 
     'Oncotarget',
     'Oxid Med Cell Longev',
