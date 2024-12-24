@@ -1,8 +1,18 @@
+TAG: pdfdownload-6-0-25-3
 TAG: pdfdownload-6-0-25-2
 TAG: pdfdownload-6-0-25-1
 DATE: 12/23/2024
 STAFF: lec
 wts2-1594/e4g-106/PMC journal being discontinued: Neural Dev, Mol Cell Biol
+
+no delay:
+    'EMBO J',
+    'EMBO Rep'
+
+1 year delay:
+    'J Cell Biol' : 12,
+    'J Exp Med' : 12,
+    'J Virol' : 12,
 
 TAG: pdfdownload-6-0-24-1
 DATE: 11/11/2024
