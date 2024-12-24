@@ -156,7 +156,6 @@ embargoedJournalDelays = {
     'J Neurosci' : 6,
     'J Virol' : 6,
     'Mol Biol Cell' : 3,
-    'Mol Cell Biol' : 6,
     'Proc Natl Acad Sci U S A' : 6,
     }
 embargoedJournals = list(embargoedJournalDelays.keys())
