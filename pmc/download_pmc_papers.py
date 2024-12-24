@@ -131,6 +131,8 @@ journals = [
     'Stem Cell Reports',
     'Theranostics',
     'Transl Psychiatry',
+    'EMBO J',
+    'EMBO Rep'
     ]
 # uncomment the next line for a shorter list for debugging
 #journals = journals[:5] + ['Dis Model Mech']
@@ -146,17 +148,15 @@ embargoedJournalDelays = {
     'Cell Death Differ' : 12,
     'Cereb Cortex' : 12,
     'Diabetes' : 12,
-    'EMBO J' : 12,
-    'EMBO Rep' : 12,
     'Genes Dev' : 6,
     'J Am Soc Nephrol' : 12,
-    'J Cell Biol' : 6,
+    'J Cell Biol' : 12,
     'J Clin Invest' : 3,
-    'J Exp Med' : 6,
+    'J Exp Med' : 12,
     'J Neurosci' : 6,
-    'J Virol' : 6,
+    'J Virol' : 12,
     'Mol Biol Cell' : 3,
-    'Proc Natl Acad Sci U S A' : 6,
+    'Proc Natl Acad Sci U S A' : 6
     }
 embargoedJournals = list(embargoedJournalDelays.keys())
 embargoedJournals.sort()
