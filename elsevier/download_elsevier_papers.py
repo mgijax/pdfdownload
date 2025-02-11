@@ -120,14 +120,9 @@ journals = [
     Journal('Behav Brain Res', 'Behavioural Brain Research'),
     Journal('Biochem Biophys Res Commun', 'Biochemical and Biophysical Research Communications'),
     Journal('Biochem Pharmacol', 'Biochemical Pharmacology'),
-    Journal('Biochim Biophys Acta Bioenerg', 'Biochimica et Biophysica Acta (BBA) - Bioenergetics'),
-    Journal('Biochim Biophys Acta Biomembr', 'Biochimica et Biophysica Acta (BBA) - Biomembranes'),
-    Journal('Biochim Biophys Acta Gen Subj', 'Biochimica et Biophysica Acta (BBA) - General Subjects'),
-    Journal('Biochim Biophys Acta Gene Regul Mech', 'Biochimica et Biophysica Acta (BBA) - Gene Regulatory Mechanisms'),
     Journal('Biochim Biophys Acta Mol Basis Dis', 'Biochimica et Biophysica Acta (BBA) - Molecular Basis of Disease'),
     Journal('Biochim Biophys Acta Mol Cell Biol Lipids', 'Biochimica et Biophysica Acta (BBA) - Molecular and Cell Biology of Lipids'),
     Journal('Biochim Biophys Acta Mol Cell Res', 'Biochimica et Biophysica Acta (BBA) - Molecular Cell Research'),
-    Journal('Biochim Biophys Acta Proteins Proteom', 'Biochimica et Biophysica Acta (BBA) - Proteins and Proteomics'),
     Journal('Biol Psychiatry', 'Biological Psychiatry'),
     Journal('Biomed Pharmacother', 'Biomedicine & Pharmacotherapy'),
     Journal('Bone', 'Bone'),
@@ -173,6 +168,11 @@ journals = [
     Journal('Immunity', 'Immunity'),
     Journal('Mol Cell', 'Molecular Cell'),
     Journal('Neuron', 'Neuron'),
+    Journal('Cell Rep Med', 'Cell Reporters Medicine'),
+    Journal('Cell Signal', 'Cellular Signalling'),
+    Journal('Hear Res', 'Hearing Ressearch'),
+    Journal('Heliyon', 'Heliyon'),
+    Journal('Mucosal Immunol', 'Mucosal Immunology')
     ]
 # Used to collect and report debugging info related to date handling
 class DateTracker:

@@ -104,9 +104,7 @@ journals = [
     'J Biol Chem',
     'J Cell Mol Med',
     'J Lipid Res',
-    'J Mol Cell Biol',
     'J Neuroinflammation',
-    'J Reprod Dev',
     'JCI Insight',
     'Life Sci Alliance',
     'mBio',
@@ -116,14 +114,12 @@ journals = [
     'Mol Neurodegener',
     'Nat Commun',
     'Nucleic Acids Res', 
-    'Oncotarget',
     'Oxid Med Cell Longev',
     'Physiol Rep',
     'PLOS Biology',
     'PLOS Genetics',
     'PLOS ONE',
     'PLoS Pathog',
-    'Protein Cell',
     'Redox Biol',
     'Sci Adv',
     'Sci Rep',
@@ -132,10 +128,14 @@ journals = [
     'Theranostics',
     'Transl Psychiatry',
     'EMBO J',
-    'EMBO Rep'
+    'EMBO Rep',
+    'Adv Sci (Weinh)',
+    'Alzheimers Dement',
+    'Alzheimers Res Ther',
+    'Cell Mol Life Sci',
+    'Neural Regen Res',
+    'PNAS Nexus'
     ]
-# uncomment the next line for a shorter list for debugging
-#journals = journals[:5] + ['Dis Model Mech']
 
 # journals that have their content embargoed for a period of time. We need to search them according to their
 # respective time delays.  Each pair is journal title : number of months of delay.  Note that the 
@@ -156,7 +156,11 @@ embargoedJournalDelays = {
     'J Neurosci' : 6,
     'J Virol' : 12,
     'Mol Biol Cell' : 3,
-    'Proc Natl Acad Sci U S A' : 6
+    'Proc Natl Acad Sci U S A' : 6,
+embargoedJournalDelays = {
+    'Brain' : 12,
+    'Genetics' : 12,
+    'Neuropsychopharmacology' : 12
     }
 embargoedJournals = list(embargoedJournalDelays.keys())
 embargoedJournals.sort()
