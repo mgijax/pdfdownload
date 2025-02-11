@@ -157,7 +157,6 @@ embargoedJournalDelays = {
     'J Virol' : 12,
     'Mol Biol Cell' : 3,
     'Proc Natl Acad Sci U S A' : 6,
-embargoedJournalDelays = {
     'Brain' : 12,
     'Genetics' : 12,
     'Neuropsychopharmacology' : 12
