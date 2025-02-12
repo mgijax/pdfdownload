@@ -1,13 +1,16 @@
 # Name: download_elsevier_papers.py
 # Purpose: download PDF papers for the preceding 60 days for a set of selected journals from Elsevier's SciDirect collection
-# Notes: 1. based on work in the MGIJax/elsevier_client GitHub product
-#    2. Destination folder of PDFs is pulled from configuration.
-#    3. The SciDirect API does not allow an end date when searching by date, only a start date.  So, if we are to implement
-#        an end date, we'll need to do that in code in this script.
+#
+# Notes: 
+#   1. based on work in the MGIJax/elsevier_client GitHub product
+#   2. Destination folder of PDFs is pulled from configuration.
+#   3. The SciDirect API does not allow an end date when searching by date, only a start date.  
+#      So, if we are to implement an end date, we'll need to do that in code in this script.
+#
 # HISTORY
 #
-# sc    07/04/2022 - Added print statements (commented out in tag) to view
-#       contents of the three caches
+# sc    07/04/2022 - Added print statements (commented out in tag) to view contents of the three caches
+#
 
 import sys
 sys.path.insert(0, '../shared')
@@ -38,8 +41,7 @@ for envVar in [ 'PG_DBSERVER', 'PG_DBNAME', 'MGI_PUBLICUSER', 'MGI_PUBLICPASSWOR
     if envVar not in os.environ:
         raise Exception('Missing environment variable: %s' % envVar)
 
-caches.initialize(os.environ['MGI_PUBLICUSER'], os.environ['MGI_PUBLICPASSWORD'],
-    os.environ['PG_DBSERVER'], os.environ['PG_DBNAME'])
+caches.initialize(os.environ['MGI_PUBLICUSER'], os.environ['MGI_PUBLICPASSWORD'], os.environ['PG_DBSERVER'], os.environ['PG_DBNAME'])
 
 # Load API key and Jax institution token from config file
 apikey = os.environ['ELSEVIER_APIKEY']
@@ -85,8 +87,9 @@ pubDateCache = MapCache.MapCache('pdfdownload_pubDateCache.txt')
 # cache to look up publication type for each PubMed ID
 pubTypeCache = MapCache.MapCache('pdfdownload_pubTypeCache.txt')
 
+# month number, default day number (if day not specified)
 monthMap = {
-    'Jan' : ('01', '31'),       # month number, default day number (if day not specified)
+    'Jan' : ('01', '31'),
     'Feb' : ('02', '28'),
     'Mar' : ('03', '31'),
     'Apr' : ('04', '30'),
@@ -114,67 +117,66 @@ class Journal(object):  # simple journal struct
         self.elsevierName = elsevierName
 
 journals = [
+    Journal('Am J Hum Genet', 'The American Journal of Human Genetics'),
+    Journal('Am J Pathol', 'The American Journal of Pathology'),
+    Journal('Arch Biochem Biophys', 'Archives of Biochemistry and Biophysics'),
+    Journal('Atherosclerosis', 'Atherosclerosis'),
+    Journal('Behav Brain Res', 'Behavioural Brain Research'),
+    Journal('Biochem Biophys Res Commun', 'Biochemical and Biophysical Research Communications'),
+    Journal('Biochem Pharmacol', 'Biochemical Pharmacology'),
+    Journal('Biochim Biophys Acta Mol Basis Dis', 'Biochimica et Biophysica Acta (BBA) - Molecular Basis of Disease'),
+    Journal('Biochim Biophys Acta Mol Cell Biol Lipids', 'Biochimica et Biophysica Acta (BBA) - Molecular and Cell Biology of Lipids'),
+    Journal('Biochim Biophys Acta Mol Cell Res', 'Biochimica et Biophysica Acta (BBA) - Molecular Cell Research'),
+    Journal('Biol Psychiatry', 'Biological Psychiatry'),
+    Journal('Biomed Pharmacother', 'Biomedicine & Pharmacotherapy'),
+    Journal('Bone', 'Bone'),
+    Journal('Brain Behav Immun', 'Brain, Behavior, and Immunity'),
     Journal('Brain Res', 'Brain Research'),
+    Journal('Cancer Cell', 'Cancer Cell'),
+    Journal('Cancer Lett', 'Cancer Letters'),
+    Journal('Cell', 'Cell'),
+    Journal('Cell Host Microbe', 'Cell Host & Microbe'),
+    Journal('Cell Immunol', 'Cellular Immunology'),
+    Journal('Cell Metab', 'Cell Metabolism'),
+    Journal('Cell Rep', 'Cell Reports'),
+    Journal('Cell Rep Med', 'Cell Reports Medicine'),
+    Journal('Cell Signal', 'Cellular Signalling'),
+    Journal('Cell Stem Cell', 'Cell Stem Cell'),
+    Journal('Cells Dev', 'Cells & Development'),
+    Journal('Curr Biol', 'Current Biology'),
+    Journal('Dev Biol', 'Developmental Biology'),
+    Journal('Dev Cell', 'Developmental Cell'),
     Journal('Exp Cell Res', 'Experimental Cell Research'),
+    Journal('Exp Eye Res', 'Experimental Eye Research'),
+    Journal('Exp Hematol', 'Experimental Hematology'),
     Journal('Exp Neurol', 'Experimental Neurology'),
+    Journal('Free Radic Biol Med', 'Free Radical Biology and Medicine'),
+    Journal('Gastroenterology', 'Gastroenterology'),
+    Journal('Gene', 'Gene'),
+    Journal('Gene Expr Patterns', 'Gene Expression Patterns'),
+    Journal('Hear Res', 'Hearing Research'),
+    Journal('Immunity', 'Immunity'),
+    Journal('Int Immunopharmacol', 'International Immunopharmacology'),
+    Journal('J Allergy Clin Immunol', 'Journal of Allergy and Clinical Immunology'),
+    Journal('J Invest Dermatol', 'Journal of Investigative Dermatology'),
+    Journal('J Mol Cell Cardiol','Journal of Molecular and Cellular Cardiology'),
     Journal('Matrix Biol', 'Matrix Biology'),
+    Journal('Metabolism', 'Metabolism'),
+    Journal('Mol Cell', 'Molecular Cell'),
+    Journal('Mol Cell Endocrinol', 'Molecular and Cellular Endocrinology'),
+    Journal('Mol Cell Neurosci', 'Molecular and Cellular Neuroscience'),
+    Journal('Mol Immunol', 'Molecular Immunology'),
+    Journal('Mucosal Immunol', 'Mucosal Immunology'),
     Journal('Neurobiol Aging', 'Neurobiology of Aging'),
     Journal('Neurobiol Dise', 'Neurobiology of Disease'),
+    Journal('Neuron', 'Neuron'),
+    Journal('Neuropharmacology', 'Neuropharmacology'),
+    Journal('Neurosci Res', 'Neuroscience Research'),
     Journal('Neurosci Lett', 'Neuroscience Letters'),
-]
-#    Journal('Am J Pathol', 'The American Journal of Pathology'),
-#    Journal('Arch Biochem Biophys', 'Archives of Biochemistry and Biophysics'),
-#    Journal('Atherosclerosis', 'Atherosclerosis'),
-#    Journal('Behav Brain Res', 'Behavioural Brain Research'),
-#    Journal('Biochem Biophys Res Commun', 'Biochemical and Biophysical Research Communications'),
-#    Journal('Biochem Pharmacol', 'Biochemical Pharmacology'),
-#    Journal('Biochim Biophys Acta Mol Basis Dis', 'Biochimica et Biophysica Acta (BBA) - Molecular Basis of Disease'),
-#    Journal('Biochim Biophys Acta Mol Cell Biol Lipids', 'Biochimica et Biophysica Acta (BBA) - Molecular and Cell Biology of Lipids'),
-#    Journal('Biochim Biophys Acta Mol Cell Res', 'Biochimica et Biophysica Acta (BBA) - Molecular Cell Research'),
-#    Journal('Biol Psychiatry', 'Biological Psychiatry'),
-#    Journal('Biomed Pharmacother', 'Biomedicine & Pharmacotherapy'),
-#    Journal('Bone', 'Bone'),
-#    Journal('Brain Behav Immun', 'Brain, Behavior, and Immunity'),
-#    Journal('Brain Res', 'Brain Research'),
-#    Journal('Cancer Lett', 'Cancer Letters'),
-#    Journal('Cell Immunol', 'Cellular Immunology'),
-#    Journal('Curr Biol', 'Current Biology'),
-#    Journal('Exp Eye Res', 'Experimental Eye Research'),
-#    Journal('Exp Hematol', 'Experimental Hematology'),
-#    Journal('Free Radic Biol Med', 'Free Radical Biology and Medicine'),
-#    Journal('Gastroenterology', 'Gastroenterology'),
-#    Journal('Gene', 'Gene'),
-#    Journal('Int Immunopharmacol', 'International Immunopharmacology'),
-#    Journal('J Allergy Clin Immunol', 'Journal of Allergy and Clinical Immunology'),
-#    Journal('J Invest Dermatol', 'Journal of Investigative Dermatology'),
-#    Journal('J Mol Cell Cardiol','Journal of Molecular and Cellular Cardiology'),
-#    Journal('Metabolism', 'Metabolism'),
-#    Journal('Mol Cell Endocrinol', 'Molecular and Cellular Endocrinology'),
-#    Journal('Mol Cell Neurosci', 'Molecular and Cellular Neuroscience'),
-#    Journal('Mol Immunol', 'Molecular Immunology'),
-#    Journal('Neuropharmacology', 'Neuropharmacology'),
-#    Journal('Neurosci Res', 'Neuroscience Research'),
-#    Journal('Neuroscience', 'Neuroscience'),
-#    Journal('Semin Cancer Biol', 'Seminars in Cancer Biology'),
-#    Journal('Am J Hum Genet', 'The American Journal of Human Genetics'),
-#    Journal('Cancer Cell', 'Cancer Cell'),
-#    Journal('Cell', 'Cell'),
-#    Journal('Cell Host Microbe', 'Cell Host & Microbe'),
-#    Journal('Cell Metab', 'Cell Metabolism'),
-#    Journal('Cell Rep', 'Cell Reports'),
-#    Journal('Cell Stem Cell', 'Cell Stem Cell'),
-#    Journal('Cells Dev', 'Cells & Development'),
-#    Journal('Dev Biol', 'Developmental Biology'),
-#    Journal('Dev Cell', 'Developmental Cell'),
-#    Journal('Gene Expr Patterns', 'Gene Expression Patterns'),
-#    Journal('Immunity', 'Immunity'),
-#    Journal('Mol Cell', 'Molecular Cell'),
-#    Journal('Neuron', 'Neuron'),
-#    Journal('Cell Rep Med', 'Cell Reports Medicine'),
-#    Journal('Cell Signal', 'Cellular Signalling'),
-#    Journal('Hear Res', 'Hearing Research'),
-#    Journal('Mucosal Immunol', 'Mucosal Immunology')
-#    ]
+    Journal('Neuroscience', 'Neuroscience'),
+    Journal('Semin Cancer Biol', 'Seminars in Cancer Biology')
+    ]
+
 # Used to collect and report debugging info related to date handling
 class DateTracker:
     # values for 'date format' -- what sort of date format was received?
@@ -598,3 +600,4 @@ if __name__ == '__main__':
 
         if DIAG_LOG:
             DIAG_LOG.close()
+
