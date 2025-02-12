@@ -149,7 +149,6 @@ embargoedJournalDelays = {
     'Cereb Cortex' : 12,
     'Diabetes' : 12,
     'Genes Dev' : 6,
-    'J Am Soc Nephrol' : 12,
     'J Cell Biol' : 12,
     'J Clin Invest' : 3,
     'J Exp Med' : 12,
