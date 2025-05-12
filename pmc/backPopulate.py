@@ -258,11 +258,9 @@ def process(args    # Config object - having params for this function
         for j, paramList in journalsToSearch.items():
            journalsToSearch[j] = ["%s AND %s" % (p, MICE_CLAUSE) \
                                                            for p in paramList]
-
     # Find/write output files & get one (summary) reporter for each
     #   journal/search params
-    pr = PMCfileRangler(basePath=args.basePath, 
-                            verbose=args.verbose, writeFiles=(not args.noWrite))
+    pr = PMCfileRangler(basePath=args.basePath, verbose=args.verbose, writeFiles=(not args.noWrite))
 
     reporters = pr.downloadFiles(journalsToSearch, maxFiles=args.maxFiles)
 
@@ -323,8 +321,7 @@ class PMCsearchReporter (object):
 
         self.mgiPubmedIds=[]		# [pmIDs] skipped since in MGI
 
-        self.noPubmedId = []            # [pmcIDs] skipped since they don't
-                                        #   have PMIDs
+        self.noPubmedId = []            # [pmcIDs] skipped since they don't have PMIDs
 
         self.earliestNoPubmedIdArticle = None # earliest article w/ no PMID
     # ---------------------
@@ -378,55 +375,41 @@ class PMCsearchReporter (object):
         """ Return a summary report (string) for this journal """
         output = "Journal: %s\n'%s'\n" % (self.journal, self.searchParams)
 
-        output += "%6d %s articles matched search\n" % \
-                            (self.totalSearchCount, self.journal[:25], )
+        output += "%6d %s articles matched search\n" % (self.totalSearchCount, self.journal[:25], )
         if self.totalSearchCount == 0: return output
 
         #output += "%6d maxFiles\n" % self.maxFiles
         output += "%6d .pdf files written\n" % self.nResultsGotPdf
 
         if self.nSkippedByType > 0:
-            debug('%s : skipped %d articles because of undesired type' % \
-                                        (self.journal, self.nSkippedByType))
-            output += "%6d Articles skipped because of type\n" % \
-                                        self.nSkippedByType
+            debug('%s : skipped %d articles because of undesired type' % (self.journal, self.nSkippedByType))
+            output += "%6d Articles skipped because of type\n" % self.nSkippedByType
             for t in self.skippedByType.keys():
-                output += "\t%6d type: %s, example: PMCID %s\n" % \
-                  (len(self.skippedByType[t]), t, str(self.skippedByType[t][0]))
+                output += "\t%6d type: %s, example: PMCID %s\n" % (len(self.skippedByType[t]), t, str(self.skippedByType[t][0]))
 
         if self.nSkippedNewType > 0:
-            debug('%s : skipped %d articles because of new type' % \
-                                        (self.journal, self.nSkippedNewType))
-            output += "%6d Articles skipped w/ new types\n" % \
-                                        self.nSkippedNewType
+            debug('%s : skipped %d articles because of new type' % (self.journal, self.nSkippedNewType))
+            output += "%6d Articles skipped w/ new types\n" % self.nSkippedNewType
             for t in self.skippedNewType.keys():
-                output += "\t%6d with type: %s, example: PMCID %s\n" % \
-                  (len(self.skippedNewType[t]),t,str(self.skippedNewType[t][0]))
+                output += "\t%6d with type: %s, example: PMCID %s\n" % (len(self.skippedNewType[t]),t,str(self.skippedNewType[t][0]))
 
         if len(self.noPubmedId) > 0:
-            debug('%s : skipped %d articles since PMC does not have PMID' % \
-                                        (self.journal, len(self.noPubmedId)))
-            output += "%6d Articles skipped since PMC does not have PMID:\n" % \
-                                                        len(self.noPubmedId)
+            debug('%s : skipped %d articles since PMC does not have PMID' % (self.journal, len(self.noPubmedId)))
+            output += "%6d Articles skipped since PMC does not have PMID:\n" % len(self.noPubmedId)
             output += '\tPMCID ' + ', '.join(map(str, self.noPubmedId)) + '\n'
             output += '\tEarliest article w/o PMID: PMC%s %s\n' % \
                         (str(self.earliestNoPubmedIdArticle.pmcid),
                          str(self.earliestNoPubmedIdArticle.date))
 
         if len(self.mgiPubmedIds) > 0:
-            debug('%s : skipped %d articles since already in MGI' % \
-                                        (self.journal, len(self.mgiPubmedIds)))
-            output += "%6d Articles skipped since already in MGI:\n" % \
-                                                        len(self.mgiPubmedIds)
+            debug('%s : skipped %d articles since already in MGI' % (self.journal, len(self.mgiPubmedIds)))
+            output += "%6d Articles skipped since already in MGI:\n" % len(self.mgiPubmedIds)
             output += '\tPMID ' + ', '.join(map(str, self.mgiPubmedIds)) + '\n'
 
         if len(self.noPdf) > 0:
-            debug('%s : %d articles w/ PDF download problem' % \
-                                            (self.journal, len(self.noPdf)))
-            output += "%6d Articles w/ PDF download problem:\n" % \
-                                                            len(self.noPdf)
-            output += '\tPMID ' + ', '.join(map(str,
-                                        [a.pmid for a in self.noPdf])) + '\n'
+            debug('%s : %d articles w/ PDF download problem' % (self.journal, len(self.noPdf)))
+            output += "%6d Articles w/ PDF download problem:\n" % len(self.noPdf)
+            output += '\tPMID ' + ', '.join(map(str, [a.pmid for a in self.noPdf])) + '\n'
         return output
 
     def getArticlesWithNoPdfs(self):
@@ -588,12 +571,9 @@ class NoPdfWriter (object):
                     
         # like '%-15s %-12s %10s %4s %3s %s\n'
         # (The - ensures left-alignment within the set number of characters.)
-        self.template = '%%-%ds %%-%ds %%%ds %%%ds %%%ds %%s\n' % \
-            (maxPmcLength, maxPmLength, dateLength, weeksLength, failuresLength)
-        self.hdrLine = self.template % (pmcTitle, pmTitle, dateTitle,
-                                        weeksTitle, failuresTitle, journalTitle)
-        self.dashLine = self.template % ('-' * maxPmcLength, '-' * maxPmLength,
-            '-' * dateLength, '-' * weeksLength, '-' * failuresLength, '-' * 15)
+        self.template = '%%-%ds %%-%ds %%%ds %%%ds %%%ds %%s\n' % (maxPmcLength, maxPmLength, dateLength, weeksLength, failuresLength)
+        self.hdrLine = self.template % (pmcTitle, pmTitle, dateTitle, weeksTitle, failuresTitle, journalTitle)
+        self.dashLine = self.template % ('-' * maxPmcLength, '-' * maxPmLength, '-' * dateLength, '-' * weeksLength, '-' * failuresLength, '-' * 15)
         return
 
     def _formatArticleTable(self, articles, label):
@@ -612,16 +592,13 @@ class NoPdfWriter (object):
                 triesCount = self.prevFailures.get(article.pmcid, 0) +1
                 tries = str(triesCount).center(self.failuresLength)
                 weeks = str(article.numWeeks).center(self.weeksLength)
-                output += self.template % (article.pmcid, article.pmid,
-                                    article.date, weeks, tries, article.journal)
+                output += self.template % (article.pmcid, article.pmid, article.date, weeks, tries, article.journal)
         return output + '\n'
 
     def write(self):
         """
-        Open & write a file containing the report of PDFs that
-        didn't download (as collected in the reporters)
-        This file is intended to be emailed to Nancy so she can manually get
-          the papers.
+        Open & write a file containing the report of PDFs that didn't download (as collected in the reporters)
+        This file is intended to be emailed to Nancy so she can manually get the papers.
         The report has 4 sections:
         1. Summary of the journals/dates searched at PMC
         2. Instructions for Nancy
@@ -723,20 +700,16 @@ class PMCfileRangler (object):
             for searchParams in journalSearch[journal]:
                 progress("\nSearching %s\n" % (journal))
                 startTime = time.time()
-                count, resultsE, results = self._runSearch(journal,
-                                                    searchParams, maxFiles)
+                count, resultsE, results = self._runSearch(journal, searchParams, maxFiles)
                 searchEnd = time.time()
-                progress('%d results - Search time: %9.2f\n' % \
-                                    (count, searchEnd-startTime))
+                progress('%d results - Search time: %9.2f\n' % (count, searchEnd-startTime))
 
-                self.curReporter = PMCsearchReporter(journal, searchParams,
-                                                            count, maxFiles)
+                self.curReporter = PMCsearchReporter(journal, searchParams, count, maxFiles)
                 self.reporters.append(self.curReporter)
 
                 self._processResults(journal, resultsE, results)
                 processEnd = time.time()
-                progress('Done %s downloads - Process time: %8.2f\n' % \
-                                        (journal, processEnd-searchEnd))
+                progress('Done %s downloads - Process time: %8.2f\n' % (journal, processEnd-searchEnd))
 
         return self.reporters
     # ---------------------
@@ -773,7 +746,7 @@ class PMCfileRangler (object):
 
         # uncomment to get the xml from each journal - may want to limit the 
         # journal list when debugging
-        #debug('results: %s' % results)
+        debug('results: %s' % results)
 
         resultsE = ET.fromstring(results)
         return count, resultsE, results
@@ -804,7 +777,7 @@ class PMCfileRangler (object):
             art.type = artE.attrib['article-type']
             #debug('art.type: %s' % art.type)
             artMetaE = artE.find("front/article-meta")
-            debug('pmcid: %s' %  artMetaE.find("article-id/[@pub-id-type='pmc']").text)
+            debug('pmcid: %s' %  artMetaE.find("article-id/[@pub-id-type='pmcaid']").text)
             pubDate = artMetaE.find("pub-date/[@pub-type='epub']")
             if not pubDate:
                 pubDate = artMetaE.find('pub-date/[@date-type="pub"]')
@@ -840,7 +813,7 @@ class PMCfileRangler (object):
             else:
                 art.date = '-'
  
-            art.pmcid  = artMetaE.find("article-id/[@pub-id-type='pmc']").text
+            art.pmcid  = artMetaE.find("article-id/[@pub-id-type='pmcaid']").text
 
             art.pmid   = artMetaE.find("article-id/[@pub-id-type='pmid']")
             if art.pmid != None:
