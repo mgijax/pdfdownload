@@ -1,20 +1,15 @@
 #!/usr/bin/sh
 
-# Usage:  download_papers.sh
+# Usage:  download_elsevier_papers.sh
 #
 # History
 #
 # lec	06/02/2025
-#	to run both PMC and Elsevier
+#	to run just the Elsevier
 #
 
 cd `dirname $0`
 . ./Configuration
-
-# remove the find pdf debug log if it is defined and it exists
-if [[ -f ${FIND_PDF_LOG} ]]; then
-        rm ${FIND_PDF_LOG}
-fi
 
 # if we don't have a log directory, create one
 if [ ! -d ${PDFDOWNLOADLOGDIR} ]; then
@@ -39,12 +34,7 @@ export PDFDOWNLOADLOGDIR
 
 CWD=`pwd`
 
-# do PubMed Central first
-cd pmc
-${PYTHON} ./download_pmc_papers.py $1 $2 "$3" 2>&1 | tee -a ${LOG}
-cd ${CWD}
-
-# then do Elsevier's SciDirect
+# do Elsevier's SciDirect
 cd elsevier
 ${PYTHON} ./download_elsevier_papers.py $1 $2 "$3" 2>&1 | tee -a ${LOG}
 cd ${CWD}
@@ -56,16 +46,16 @@ if [ "${MAIL_LOG_CUR}" != "" ]; then
     if [ `hostname` = "bhmgiapp01" ]; then
 	for i in `echo ${MAIL_LOG_CUR} | sed 's/,/ /g'`
 	do
-		if [ -f ${PDFDOWNLOADLOGDIR}/noPdfs.log ]; then
-			mailx -s "pdfdownload - No PDF Log" ${MAIL_LOG_CUR} < ${PDFDOWNLOADLOGDIR}/noPdfs.log
+		if [ -f ${PDFDOWNLOADLOGDIR}/noPdfs_elsevier.log ]; then
+			mailx -s "pdfdownload - No PDF Log" ${MAIL_LOG_CUR} < ${PDFDOWNLOADLOGDIR}/noPdfs_elsevier.log
 		else
-			echo "No ${PDFDOWNLOADLOGDIR}/noPdfs.log to email" | tee -a ${LOG}
+			echo "No ${PDFDOWNLOADLOGDIR}/noPdfs_elsevier.log to email" | tee -a ${LOG}
 		fi
 
-		if [ -f ${PDFDOWNLOADLOGDIR}/embargoedNoPdfs.log ]; then
-			mailx -s "pdfdownload - No PDF Log (Embargoed Journals)" ${MAIL_LOG_CUR} < ${PDFDOWNLOADLOGDIR}/embargoedNoPdfs.log
+		if [ -f ${PDFDOWNLOADLOGDIR}/embargoedNoPdfs_elsevier.log ]; then
+			mailx -s "pdfdownload - No PDF Log (Embargoed Journals)" ${MAIL_LOG_CUR} < ${PDFDOWNLOADLOGDIR}/embargoedNoPdfs_elsevier.log
 		else
-			echo "No ${PDFDOWNLOADLOGDIR}/embargoedNoPdfs.log to email" | tee -a ${LOG}
+			echo "No ${PDFDOWNLOADLOGDIR}/embargoedNoPdfs_elsevier.log to email" | tee -a ${LOG}
 		fi
 	done
     fi
