@@ -119,7 +119,7 @@ import caches
 # global stuff for logging
 # ------------------------
 
-DEBUG = True        # True to write extra debugging info
+DEBUG = False
 DIAG_LOG = None     # file pointer for debug file
 PDF_LOG_DIR = None          # for output logs
 
