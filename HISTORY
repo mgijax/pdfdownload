@@ -1,3 +1,8 @@
+TAG: pdfdownload-6-0-25-11
+DATE: 06/10/2025
+STAFF: lec
+pmc/backPopulate.py; set DEBUG=False
+
 TAG: pdfdownload-6-0-25-10
 DATE: 06/02/2025
 STAFF: lec
@@ -5,11 +10,6 @@ create new scripts so PMC and Elsevier can be run separately
         modified:   download_papers.sh
         new file:   download_elsevier_papers.sh
         new file:   download_pmc_papers.sh
-
-TAG: pdfdownload-6-0-25-10
-DATE: 06/10/2025
-STAFF: lec
-pmc/backPopulate.py; set DEBUG=False
 
 TAG: pdfdownload-6-0-25-9
 DATE: 05/12/2025
