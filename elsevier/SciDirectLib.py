@@ -70,7 +70,6 @@ There are automated tests for this module: # includes usage examples
 #       title missing from two papers - catch the key error/set to empty string
 #
 
-
 import json, time, os, logging
 import urllib.request
 from copy import deepcopy
@@ -102,8 +101,7 @@ def get_logger(name):
     ch = logging.StreamHandler()
     ch.setLevel(logging.ERROR)
     # create formatter and add it to the handlers
-    formatter = logging.Formatter( \
-                        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     fh.setFormatter(formatter)
     ch.setFormatter(formatter)
     # add the handlers to the logger
@@ -218,12 +216,15 @@ class ElsClient(object):
             headers["X-ELS-Insttoken"] = self.inst_token
         logger.info('Sending PUT request to ' + URL)
         logger.info('Params:  ' + str(jsonParams))
+        logger.info('Headers: ' + str(headers))
 
         req = urllib.request.Request(url=URL, method='PUT')
         
         for (key, value) in list(headers.items()):
             req.add_header(key, value)
         
+        logger.info(req)
+        logger.info(jsonParams.encode())
         res = urllib.request.urlopen(req, data=jsonParams.encode())
 
         self.__ts_last_req = time.time()
@@ -294,6 +295,7 @@ class SciDirectSearch(object):
             query = self._query
 
         ## do 1st API call
+        logger.info(query)
         queryJson = json.dumps(query)
         api_response = self._elsClient.execPutRequest(url, queryJson)
         self._tot_num_res = int(api_response['resultsFound'])
@@ -306,16 +308,15 @@ class SciDirectSearch(object):
         self._results = api_response['results']
 
         if self._getAll:     ## do any needed additional API calls
-            while (len(self._results) < self._tot_num_res) and \
-                                not (len(self._results) >= self._maxResults):
+            while (len(self._results) < self._tot_num_res) and not (len(self._results) >= self._maxResults):
                 query['display']['offset'] += self._increment
-
                 queryJson = json.dumps(query)
                 api_response = self._elsClient.execPutRequest(url, queryJson)
                 self._results += api_response['results']
 
         with open('dump.json', 'w') as f:
             f.write(json.dumps(self._results, sort_keys=True, indent=2))
+
         return self
 
     def getTotalNumResults(self): return self._tot_num_res
@@ -368,10 +369,10 @@ class SciDirectReference(object):
         self._doi             = self._searchResultsFields['doi']
         self._journal         = self._searchResultsFields['sourceTitle']
         try:
-            self._title           = self._searchResultsFields['title']
+            self._title = self._searchResultsFields['title']
         except:
             self._title = ''
-        self._loadDate        = self._searchResultsFields['loadDate']
+        self._loadDate = self._searchResultsFields['loadDate']
         self._publicationDate = self._searchResultsFields['publicationDate']
 
     # getters for fields from SciDirectSearch result
@@ -420,6 +421,7 @@ class SciDirectReference(object):
                 self._volume   = 'no volume'
 
                 return
+
             # TODO: should we dump json output somewhere for debugging?
             r = response['full-text-retrieval-response']
             #print(json.dumps(response, sort_keys=True, indent="  "))

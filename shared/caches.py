@@ -74,26 +74,28 @@ class DOICache (IDCache):
     # Is: an IDCache of all DOI IDs that are currently in the database
     
     def populateCache(self):
-        cmd = '''select accID
-            from acc_accession
-            where _MGIType_key = 1
-                and _LogicalDB_key = 65'''
+        cmd = '''
+            select doiid
+            from bib_citation_cache
+            where doiid is not null
+            '''
 
         for row in pg_db.sql(cmd, 'auto'):
-            self.cache.add(row['accID'])
+            self.cache.add(row['doiid'])
         return
     
 class PubMedWithPDF (IDCache):
     # Is: an IDCache of PubMed IDs for which we have PDFs already
     
     def populateCache(self):
-        cmd = '''select a.accID
-            from bib_workflow_data r, acc_accession a
-            where r._Refs_key = a._Object_key
-                and a._MGIType_key = 1
-                and r.hasPDF = 1
-                and a._LogicalDB_key = 29'''
+        cmd = '''
+            select c.pubmedid
+            from bib_workflow_data r, bib_citation_cache c
+            where r.hasPDF = 1
+            and r._Refs_key = c._refs_key
+            and c.pubmedid is not null
+            '''
 
         for row in pg_db.sql(cmd, 'auto'):
-            self.cache.add(row['accID'])
+            self.cache.add(row['pubmedid'])
         return

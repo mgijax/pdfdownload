@@ -1,3 +1,11 @@
+TAG: pdfdownload-6-0-25-1?
+DATE: 06/26/2025
+STAFF: lec
+wts2-1690/e4g-297/pdfdownload: Elsevier
+        modified:   elsevier/SciDirectLib.py
+        modified:   elsevier/download_elsevier_papers.py
+        modified:   shared/caches.py
+
 TAG: pdfdownload-6-0-25-11
 DATE: 06/10/2025
 STAFF: lec

@@ -7,10 +7,6 @@
 #   3. The SciDirect API does not allow an end date when searching by date, only a start date.  
 #      So, if we are to implement an end date, we'll need to do that in code in this script.
 #
-# HISTORY
-#
-# sc    07/04/2022 - Added print statements (commented out in tag) to view contents of the three caches
-#
 
 import sys
 sys.path.insert(0, '../shared')
@@ -42,6 +38,8 @@ for envVar in [ 'PG_DBSERVER', 'PG_DBNAME', 'MGI_PUBLICUSER', 'MGI_PUBLICPASSWOR
         raise Exception('Missing environment variable: %s' % envVar)
 
 caches.initialize(os.environ['MGI_PUBLICUSER'], os.environ['MGI_PUBLICPASSWORD'], os.environ['PG_DBSERVER'], os.environ['PG_DBNAME'])
+# cache of papers already in the MGI db that have PDFs
+pubmedWithPDF = caches.PubMedWithPDF()
 
 # Load API key and Jax institution token from config file
 apikey = os.environ['ELSEVIER_APIKEY']
@@ -55,9 +53,6 @@ ACTUALLY_WRITE_PDFS = True
 
 # run in debug mode to get more log output (True / False)
 DEBUG = True
-
-# cache of papers already in the MGI db that have PDFs
-pubmedWithPDF = caches.PubMedWithPDF()
 
 # output directories
 PDF_OUTPUT_DIR = None       # for PDF files
@@ -77,15 +72,6 @@ if 'PDFDIR' in os.environ:
     PDF_OUTPUT_DIR = os.environ['PDFDIR']
 else:
     raise Exception('Must define PDFDIR')
-
-# cache to look up PubMed IDs for each pii
-pmidCache = MapCache.MapCache('pdfdownload_pmidCache.txt')
-
-# cache to look up publication date for each PubMed ID
-pubDateCache = MapCache.MapCache('pdfdownload_pubDateCache.txt')
-
-# cache to look up publication type for each PubMed ID
-pubTypeCache = MapCache.MapCache('pdfdownload_pubTypeCache.txt')
 
 # month number, default day number (if day not specified)
 monthMap = {
@@ -312,35 +298,6 @@ def parseParameters():
     if sys.argv[-1] != '':
         startDate = ''
         stopDate = ''
-    # sc 5/9/22 - the rest of this was not working- you need both the short and long version of the journal
-    # see the journals list of Journal objects above.
-        #keep = []
-        #for journal in journals:
-        #    if sys.argv[-1] == journal.mgiName:
-        #        keep.append(journal)
-        #        break
-
-        #if keep:
-        #    journals = keep
-        #    sys.argv = sys.argv[:-1]
-
-    #else:
-    #    # Empty string comes in if no journal specified; remove it and keep list of all journals as-is.
-    #    sys.argv = sys.argv[:-1]
-        
-    #if len(sys.argv) > 1:
-    #    if len(sys.argv) != 3:
-    #        bailout('Wrong number of parameters', True)
-
-    #    startDate = sys.argv[1].strip()
-    #    stopDate = sys.argv[2].strip()
-        
-    #    dateRE = re.compile('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
-    #    if not dateRE.match(startDate):
-    #        bailout('Invalid start date: %s' % startDate)
-    #    if not dateRE.match(stopDate):
-    #        bailout('Invalid stop date: %s' % stopDate)
-            
     else:
         # 24 hours per day, 60 minutes per hour, 60 seconds per minute
         startDate = time.strftime("%Y-%m-%d", time.localtime(time.time() - windowSize * 24 * 60 * 60))
@@ -424,9 +381,6 @@ def downloadPapers (journal, results, startDate, stopDate):
     
     longName = journal.elsevierName         # long-form of the desired journal name
     refTypes = {}                           # maps from each reference type to a count of those kept
-    numPMIDs = 0                            # number with PubMed IDs
-    numPDFs = 0                             # number of PDFs written
-
     beyondStop = []     # references loaded after the stop date (by DOI)
     wrongJournals = []  # list of wrong journals that were returned by the search
     noIDs = []          # references with no PubMed IDs yet (by DOI)
@@ -435,107 +389,64 @@ def downloadPapers (journal, results, startDate, stopDate):
     
     debug('-- search returned %s references' % results.getTotalNumResults())
 
-    # Sadly, we need to switch to use PubMed to look up accurate publication dates for these
-    # references.  The SciDirect ones are not consistent with the dates in the downloaded PDFs.
-    
-    publicationDates = {}
-
+    # Sadly, we need to switch to use PubMed to look up accurate publication dates for these references.  
+    # The SciDirect ones are not consistent with the dates in the downloaded PDFs.
     pmAgent = PubMedAgent.PubMedAgentMedline()
     publicationDates = {}           # PM ID -> publication date
     missed = 0
-    for r in results.getIterator():
-        pmid = None
-        if pmidCache.contains(r.getPii()):
-            pmid = pmidCache.get(r.getPii())
-        else:
-            pmid = r.getPmid()
-            
-            if pmid != 'no PMID':
-                #print('pmidCache put1 pimid: %s pii: %s' % (pmid, r.getPii()))
-                pmidCache.put(r.getPii(), pmid)
-
-        if pmid != 'no PMID':
-            if pubDateCache.contains(pmid):
-                publicationDates[pmid] = pubDateCache.get(pmid)
-            else:
-                pmRef = pmAgent.getReferenceInfo(pmid)
-                if pmRef != None:
-                    publicationDates[pmid] = getStandardDateFormat(pmRef.getDate())
-                    #print('journal.mgiName: %s pmid: %s publicationDates[pmid]: %s' % (journal.mgiName, pmid, publicationDates[pmid]))
-                    if publicationDates[pmid] != None:
-                        pubDateCache.put(pmid, publicationDates[pmid])
-                    dateTracker.track(journal.elsevierName, pmRef.getDate(), publicationDates[pmid])
-        else:
-# Uncomment this to collect info on pii IDs (internal to SciDirect) that cannot be mapped to PubMed IDs.
-#            debug('No PMID for pii %s, title: %s' % (r.getPii(), r.getTitle()))
-            pass
-                
-        if pmid not in publicationDates:
-#            debug('   > missing date for pii %s, pmid %s' % (r.getPii(), pmid))
-            missed = missed + 1
-
-    debug('-- retrieved %d publication dates from PubMed (%d do not have them yet)' % (len(publicationDates), missed))
-
     totalCount = 0
-    wrongJournalCount = 0
     inMGI = 0
-    
-    for r in results.getIterator():
-        pii = r.getPii()
-        totalCount = totalCount + 1
 
-        # Right up front, we can exclude papers from other journals.  (The SciDirect API uses a word
-        # search for journal name, so if our desired journal is a contained in of other journal names, we'll
-        # get papers back for those too.  Because the journal name is in the initial data packet received,
-        # eliminating those up front will prevent subsequent calls to retrieve other data.
-        if longName != r.getJournal():
-            wrongJournalCount = wrongJournalCount + 1
-            if r.getJournal() not in wrongJournals:
-                wrongJournals.append(r.getJournal())
-            continue
-            
-        # If we already have the PubMed ID cached, we don't need to go back to SciDirect to retrieve it.
-        pmid = None
-        if pmidCache.contains(pii):
-            pmid = pmidCache.get(pii)
-        else:
-            pmid = r.getPmid()
-            if pmid != 'no PMID':
-                #print('pmidCache put2 pmid: %s pii: %s' % (pmid, pii))
-                pmidCache.put(pii, pmid)
+    for r in results.getIterator():
+
+        pmid = r.getPmid()
 
         # skip any papers we already have in the database
         if pubmedWithPDF.contains(pmid):
             inMGI = inMGI + 1
+            #debug('paper is already in MGI; skipping: %s' % (pmid))
             continue
         
-        # If we already have the publication type cached, we don't need to go back to SciDirect to retrieve it.
-        # Otherwise, get it.
-        pubType = None
-        if pubTypeCache.contains(pmid):
-            pubType = pubTypeCache.get(pmid)
+        if pmid != 'no PMID':
+            pmRef = pmAgent.getReferenceInfo(pmid)
+            if pmRef != None:
+                publicationDates[pmid] = getStandardDateFormat(pmRef.getDate())
+                #debug('journal.mgiName: %s pmid: %s publicationDates[pmid]: %s' % (journal.mgiName, pmid, publicationDates[pmid]))
+            dateTracker.track(journal.elsevierName, pmRef.getDate(), publicationDates[pmid])
         else:
-            pubType = r.getPubType()
-            #print('pubTypeCache put pmid: %s pubType: %s' % (pmid,pubType)) 
-            pubTypeCache.put(pmid, pubType)
-        
+            # Uncomment this to collect info on pii IDs (internal to SciDirect) that cannot be mapped to PubMed IDs.
+            #debug('No PMID for pii %s, title: %s' % (r.getPii(), r.getTitle()))
+            pass
+                
+        if pmid not in publicationDates:
+            #debug('   > missing date for pii %s, pmid %s' % (r.getPii(), pmid))
+            missed = missed + 1
+
+        totalCount = totalCount + 1
+
+        # exclude papers from other journals.  
+        # The SciDirect API uses a word search for journal name, so if our desired journal is contained in other journal names,
+        # get papers back for those too.  Because the journal name is in the initial data packet received,
+        # eliminating those up front will prevent subsequent calls to retrieve other data.
+        if longName != r.getJournal():
+            if r.getJournal() not in wrongJournals:
+                wrongJournals.append(r.getJournal())
+            continue
+            
         try:
+            pubType = r.getPubType()
             pubDate = None
             if pmid in publicationDates:
                 pubDate = publicationDates[pmid]
 
             # Must ensure that the reference's date is not beyond the stopDate.
-            
             if isWithin(pubDate, startDate, stopDate):
                 refTypes[pubType] = refTypes.get(pubType, 0) + 1
-                
-# Uncomment this to collect info on all papers to be downloaded.
-#                debug('ref: %s, %s, %s, %s, %s' % (pii, pmid, r.getDoi(), pubDate, r.getJournal()))
+                #debug('ref: %s, %s, %s, %s, %s' % (pii, pmid, r.getDoi(), pubDate, r.getJournal()))
+
                 # write pdf if we have PMID
                 if pmid != 'no PMID':
-                    numPMIDs += 1 
                     if ACTUALLY_WRITE_PDFS:
-                        numPDFs += 1 
                         fname = os.path.join(PDF_OUTPUT_DIR, 'PMID_%s.pdf' % pmid)
                         debug('Scheduling PMID_%s' % pmid)
                         try:
@@ -554,13 +465,14 @@ def downloadPapers (journal, results, startDate, stopDate):
             print(json.dumps(r.getDetails(), sort_keys=True, indent=2))
             raise
 
+    debug('-- retrieved %d publication dates from PubMed (%d do not have them yet)' % (len(publicationDates), missed))
     debug('-- examined %d remaining papers' % totalCount)
     debug("-- excluded %d papers already in MGI" % inMGI)
     debug("-- excluded %d papers because publication date is outside the specified dates" % len(beyondStop))
     debug("-- excluded %d papers because of missing PubMed ID" % len(noIDs))
     debug("-- excluded %d papers that were missing their PDF file" % len(noPdfs))
-    debug("-- excluded %d papers because they were from the wrong journal" % (wrongJournalCount))
-    if wrongJournalCount > 0:
+    debug("-- excluded %d papers because they were from the wrong journal" % (str(len(wrongJournals))))
+    if len(wrongJournals) > 0:
         debug("   > %d other journals: %s" % (len(wrongJournals), ', '.join(wrongJournals)))
     debug("-- %d papers successfully downloaded" % len(downloaded))
     debug("-- summary of matching publication types: %s" % str(refTypes), True)
@@ -580,21 +492,8 @@ if __name__ == '__main__':
             results = searchJournal(journal, startDate, stopDate)
             if results.getTotalNumResults() > 0:
                 downloadPapers(journal, results, startDate, stopDate)
-
             elapsed = time.time() - journalStartTime
             debug('finished %s in %0.2f sec' % (journal.elsevierName, elapsed))
-
-        print(' pubDateCache.save()')
-        pubDateCache.save()
-        debug('-- wrote %d entries to cache file: %s' % (pubDateCache.size(), pubDateCache.getPath()))
-
-        print('pmidCache.save()')
-        pmidCache.save()
-        debug('-- wrote %d entries to cache file: %s' % (pmidCache.size(), pmidCache.getPath()))
-
-        print('pubTypeCache.save()')
-        pubTypeCache.save()
-        debug('-- wrote %d entries to cache file: %s' % (pubTypeCache.size(), pubTypeCache.getPath()))
 
         dateTracker.report()
 
