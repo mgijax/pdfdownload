@@ -163,9 +163,9 @@ journals = [
     Journal('Semin Cancer Biol', 'Seminars in Cancer Biology')
     ]
 
-journals = [
-    Journal('Semin Cancer Biol', 'Seminars in Cancer Biology')
-    ]
+#journals = [
+#    Journal('Semin Cancer Biol', 'Seminars in Cancer Biology')
+#    ]
 
 # Used to collect and report debugging info related to date handling
 class DateTracker:
