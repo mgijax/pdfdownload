@@ -163,6 +163,10 @@ journals = [
     Journal('Semin Cancer Biol', 'Seminars in Cancer Biology')
     ]
 
+journals = [
+    Journal('Semin Cancer Biol', 'Seminars in Cancer Biology')
+    ]
+
 # Used to collect and report debugging info related to date handling
 class DateTracker:
     # values for 'date format' -- what sort of date format was received?
@@ -392,6 +396,7 @@ def downloadPapers (journal, results, startDate, stopDate):
     # Sadly, we need to switch to use PubMed to look up accurate publication dates for these references.  
     # The SciDirect ones are not consistent with the dates in the downloaded PDFs.
     pmAgent = PubMedAgent.PubMedAgentMedline()
+
     publicationDates = {}           # PM ID -> publication date
     missed = 0
     totalCount = 0
@@ -471,7 +476,7 @@ def downloadPapers (journal, results, startDate, stopDate):
     debug("-- excluded %d papers because publication date is outside the specified dates" % len(beyondStop))
     debug("-- excluded %d papers because of missing PubMed ID" % len(noIDs))
     debug("-- excluded %d papers that were missing their PDF file" % len(noPdfs))
-    debug("-- excluded %d papers because they were from the wrong journal" % (str(len(wrongJournals))))
+    debug("-- excluded %d papers because they were from the wrong journal" % len(wrongJournals))
     if len(wrongJournals) > 0:
         debug("   > %d other journals: %s" % (len(wrongJournals), ', '.join(wrongJournals)))
     debug("-- %d papers successfully downloaded" % len(downloaded))

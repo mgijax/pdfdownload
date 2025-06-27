@@ -4,12 +4,9 @@
     This is based on an open source python client provided by Elsevier at
     https://github.com/ElsevierDev/elsapy
 
-    BUT has been MUCH stripped down and simplified for MGI's purposes and
-    modified to support:
-    (1) use of the SciDirect PUT API interface instead of the old, depricated
-       GET interface
-    (2) downloading of PDFs
-    (elsapy also does not seem to be supported much):
+    BUT has been MUCH stripped down and simplified for MGI's purposes and modified to support:
+    (1) use of the SciDirect PUT API interface instead of the old, depricated GET interface
+    (2) downloading of PDFs (elsapy also does not seem to be supported much):
 
     Documentation for the API itself (not elsapy)
     * The PUT API takes a json payload to specify the query parameters and
@@ -35,24 +32,18 @@ Class Overview
     class ElsClient
     - low level client for sending http requests to the API & getting results
     - does throttling, writing http requests to log file
-    - knows how to construct http request header w/ appropriate API key, 
-        institutional token, and user agent
-    - executes a GET request(url, contentType)
-        with result content-type either json or pdf.
+    - knows how to construct http request header w/ appropriate API key, institutional token, and user agent
+    - executes a GET request(url, contentType) with result content-type either json or pdf.
         Returns the unserialized json payload or the pdf bytes
-    - executes a PUT request(url, json_params) and returns unserialized json
-        payload.
+    - executes a PUT request(url, json_params) and returns unserialized json payload.
 
     class SciDirectSearch
-    - Does a search against the SciDirect API and provides access to the search
-        results in various ways.
+    - Does a search against the SciDirect API and provides access to the search results in various ways.
     - search params are specified as a python dict
-    - can get count of matching results, unserialized results, or as
-        iterator of SciDirectReference objects (below)
+    - can get count of matching results, unserialized results, or as iterator of SciDirectReference objects (below)
     - saves search results json to a file (for debugging).
         TODO: make this configurable.
-    - fetches the query results in increments & has an overall maximum result
-        set size to be polite to the API
+    - fetches the query results in increments & has an overall maximum result set size to be polite to the API
 
     class SciDirectReference
     - represents a reference object (article) at SciDirect
@@ -124,7 +115,8 @@ class ElsClient(object):
     """ See class overview above
     """
     __user_agent = "MGI-SciDirectClient"
-    __min_req_interval = 6        ## min num seconds between requests
+    #__min_req_interval = 6        ## min num seconds between requests
+    __min_req_interval = 1        ## min num seconds between requests
                                   ## got RATE_LIMIT_EXCEEDED when I used 0.5
     __ts_last_req = 0.0           ## time of the last request (in sec)
  
@@ -142,15 +134,16 @@ class ElsClient(object):
            If contentType = 'json', returns the unserialized json payload
            if contentType= 'pdf', returns the raw bytes
         """
+
         ## Validate contentType
         if contentType not in ['json', 'pdf']:
-            msg = "invalid contentType '%s', only pdf and json are supported" \
-                                                % contentType
+            msg = "invalid contentType '%s', only pdf and json are supported" % contentType
             raise ValueError(msg + '\n')
 
         ## Throttle request, if need be
         interval = time.time() - self.__ts_last_req
         if (interval < self.__min_req_interval):
+            #logger.info("time.sleep(): %d" % (self.__min_req_interval - interval))
             time.sleep( self.__min_req_interval - interval )
         
         ## Construct and execute request
@@ -161,13 +154,15 @@ class ElsClient(object):
             }
         if self.inst_token:
             headers["X-ELS-Insttoken"] = self.inst_token
-        logger.info("Sending GET request to %s contentType='%s'" % \
-                                                            (URL, contentType))
+
+        logger.info("Sending GET request to %s contentType='%s'" % (URL, contentType))
         req = urllib.request.Request(URL)
+        #logger.info("Returned req = urllib.request.Request(URL)")
         for (key, value) in list(headers.items()):
             req.add_header(key, value)
         try: 
             res = urllib.request.urlopen(req)
+            #logger.info("Returned res = urllib.request.urlopen(req)")
         except:
             print('issue completing urllib.request.urlopen(req) for URL: %s' % URL) 
             return 1
@@ -176,10 +171,7 @@ class ElsClient(object):
 
         ## Check results
         if res.code != 200:        # bail out
-            self._status_msg="HTTP " + str(res.code) + \
-                                " Error from " + URL + \
-                                " using headers " + str(headers) + \
-                                ":\n" + res.read()
+            self._status_msg="HTTP " + str(res.code) + " Error from " + URL + " using headers " + str(headers) + ":\n" + res.read()
             logger.info(self._status_msg)       # logger.error() instead?
             #raise urllib.HTTPError(self._status_msg)
 
@@ -233,10 +225,7 @@ class ElsClient(object):
         ## Check results
         if res.code != 200:        # bail out
             self._status_msg="HTTP " + str(res.code) + \
-                                " Error from " + URL + \
-                                "\nusing headers: " + str(headers) +  \
-                                "\nand data: " + str(jsonParams) +  \
-                                ":\n" + res.read()
+                                " Error from " + URL + "\nusing headers: " + str(headers) + "\nand data: " + str(jsonParams) + ":\n" + res.read()
             logger.info(self._status_msg)       # logger.error() instead?
             raise urllib.HTTPError(self._status_msg)
 
@@ -365,9 +354,9 @@ class SciDirectReference(object):
     def _unpackSciDirectResult(self):
         """ unpack the dict from SciDirectSearch result representing the ref
         """
-        self._pii             = self._searchResultsFields['pii']
-        self._doi             = self._searchResultsFields['doi']
-        self._journal         = self._searchResultsFields['sourceTitle']
+        self._pii = self._searchResultsFields['pii']
+        self._doi = self._searchResultsFields['doi']
+        self._journal = self._searchResultsFields['sourceTitle']
         try:
             self._title = self._searchResultsFields['title']
         except:
@@ -413,13 +402,14 @@ class SciDirectReference(object):
 
             # This URL just gets meta info and has a smaller payload
             url = url_base + 'content/article/pii/%s?view=META' % str(self._pii)
+            logger.info("Sending response = self._elsClient.execGetRequest(url)")
             response = self._elsClient.execGetRequest(url)
+            #logger.info("Returned response = self._elsClient.execGetRequest(url)")
             if response == 1: # execGetRequest returns 1 if fails
                 print('issue completing execGetRequest for url: %s' % url)
                 self._pmid     = 'no PMID'
                 self._pubType  = 'no pubType'
                 self._volume   = 'no volume'
-
                 return
 
             # TODO: should we dump json output somewhere for debugging?
