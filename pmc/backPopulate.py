@@ -721,7 +721,7 @@ class PMCfileRangler (object):
         progress("Full query: %s\n" % query.replace('+', ' '))
 
         # Search PMC for matching articles
-        debug('query: $s' % (query)
+        debug('query: $s' % (query))
         debug('%s : searching...' % journalName)
         debug("%s : full query : %s" % (journalName, query.replace('+', ' ')))
 
