@@ -1,3 +1,8 @@
+TAG: pdfdownload-6-0-26-1
+DATE: 08/27/2025
+STAFF: lec
+fix: embargoedNoPdfs_pmc.log noPdfs_pmc.log
+
 TAG: pdfdownload-6-0-25-12
 DATE: 06/26/2025
 STAFF: lec

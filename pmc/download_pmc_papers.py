@@ -262,7 +262,7 @@ if __name__ == '__main__':
         config.setVerbose(False)
         
         if 'PDFDOWNLOADLOGDIR' in os.environ:
-            noPdfFile = os.path.join(os.environ['PDFDOWNLOADLOGDIR'], 'noPdfs.log')
+            noPdfFile = os.path.join(os.environ['PDFDOWNLOADLOGDIR'], 'noPdfs_pmc.log')
             config.setNoPdfFile(noPdfFile)
         else:
             raise Exception('Must define PDFDOWNLOADLOGDIR')
@@ -284,7 +284,7 @@ if __name__ == '__main__':
         embConfig.setVerbose(False)
         
         if 'PDFDOWNLOADLOGDIR' in os.environ:
-            noPdfFile = os.path.join(os.environ['PDFDOWNLOADLOGDIR'], 'embargoedNoPdfs.log')
+            noPdfFile = os.path.join(os.environ['PDFDOWNLOADLOGDIR'], 'embargoedNoPdfs_pmc.log')
             embConfig.setNoPdfFile(noPdfFile)
         else:
             raise Exception('Must define PDFDOWNLOADLOGDIR')
