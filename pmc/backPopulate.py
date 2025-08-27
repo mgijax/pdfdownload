@@ -110,7 +110,7 @@ import re
 from datetime import date, timedelta
 import subprocess
 import simpleURLLib as surl
-import NCBIutilsLib as eulib
+import NCBIutilsLib as eulib    # lib_py_web/NCBIutilsLib.py
 import xml.etree.ElementTree as ET
 import Dispatcher
 import caches
@@ -250,14 +250,12 @@ def process(args    # Config object - having params for this function
     # just one query string per journal for now
     baseQueryString = "%%s[DP] AND %s" % OPEN_ACCESS_CLAUSE
 
-    journalsToSearch = buildJournalSearch(baseQueryString, args.journals,
-                                                            args.dateRanges)
+    journalsToSearch = buildJournalSearch(baseQueryString, args.journals, args.dateRanges)
     startTime = time.time()
 
     if args.miceOnly:		# add mice-only clause to each search
         for j, paramList in journalsToSearch.items():
-           journalsToSearch[j] = ["%s AND %s" % (p, MICE_CLAUSE) \
-                                                           for p in paramList]
+           journalsToSearch[j] = ["%s AND %s" % (p, MICE_CLAUSE) for p in paramList]
     # Find/write output files & get one (summary) reporter for each
     #   journal/search params
     pr = PMCfileRangler(basePath=args.basePath, verbose=args.verbose, writeFiles=(not args.noWrite))
@@ -659,14 +657,11 @@ class PMCfileRangler (object):
                     }
 
     def __init__(self, 
-                basePath='.',		# base path to write article files
-                                        # files written to basePath/journalName
+                basePath='.',		# base path to write article files files written to basePath/journalName
                 urlReader=surl.ThrottledURLReader(seconds=0.2),
                 verbose=False,
                 writeFiles=True,	# =False to not write any files/dirs
-                getPdf=True		# =True to write PDF files for each
-                                        #   matching article that has PDF
-                                        #   (pmid.pdf)
+                getPdf=True		# =True to write PDF files for each matching article that has PDF (pmid.pdf)
                 ):
         self.basePath = basePath
         self.urlReader = urlReader
@@ -716,8 +711,7 @@ class PMCfileRangler (object):
 
     def _runSearch(self, journalName, searchParams, maxFiles):
         """ Search PMC for articles from JournalName w/ search Params.
-            Return count of articles, ElementTree, and raw result text
-                of PMC search results.
+            Return count of articles, ElementTree, and raw result text of PMC search results.
         """
 
         query = '"%s"[TA]+AND+%s' % (journalName, searchParams,)
@@ -727,6 +721,7 @@ class PMCfileRangler (object):
         progress("Full query: %s\n" % query.replace('+', ' '))
 
         # Search PMC for matching articles
+        debug('query: $s' % (query)
         debug('%s : searching...' % journalName)
         debug("%s : full query : %s" % (journalName, query.replace('+', ' ')))
 
@@ -942,8 +937,7 @@ def getPdfUrl(pmcid):
     if errorE != None:
         code = errorE.attrib['code']
         msg = errorE.text
-        progress("Error finding OA link for PMC%s. Code='%s'. Message='%s'\n" \
-                                            % (pmcid, code, msg))
+        #progress("Error finding OA link for PMC%s. Code='%s'. Message='%s'\n" % (pmcid, code, msg))
         return ''
 
     # Get file URL. Use PDF link if it exists, if not assume tgz link exists
@@ -953,6 +947,7 @@ def getPdfUrl(pmcid):
         # Seems like this could fail, or could find .tgz but no PDF within
     #else: print "PMC%s had direct pdf link" % str(pmcid)
 
+    print(linkE)
     return linkE.attrib['href']
 # ---------------------
 
