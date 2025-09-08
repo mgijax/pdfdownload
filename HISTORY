@@ -1,3 +1,9 @@
+TAG: pdfdownload-6-0-26-5
+DATE: 08/27/2025
+STAFF: lec
+HISTORICAL_WINDOW_SIZE = 240
+        modified:   elsevier/download_elsevier_papers.py
+
 TAG: pdfdownload-6-0-26-4
 TAG: pdfdownload-6-0-26-3
 TAG: pdfdownload-6-0-26-2

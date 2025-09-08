@@ -59,8 +59,8 @@ PDF_OUTPUT_DIR = None       # for PDF files
 PDF_LOG_DIR = None          # for output logs
 DIAG_LOG = None             # diagnostic log
 
-#HISTORICAL_WINDOW_SIZE = 240           # how many days is our window for searching (roughly 8 months)
-HISTORICAL_WINDOW_SIZE = 90           # how many days is our window for searching (roughly 3 months)
+HISTORICAL_WINDOW_SIZE = 240           # how many days is our window for searching (roughly 8 months)
+#HISTORICAL_WINDOW_SIZE = 90           # how many days is our window for searching (roughly 3 months)
 
 if 'PDFDOWNLOADLOGDIR' in os.environ:
     PDF_LOG_DIR = os.environ['PDFDOWNLOADLOGDIR']
@@ -163,9 +163,9 @@ journals = [
     Journal('Semin Cancer Biol', 'Seminars in Cancer Biology')
     ]
 
-#journals = [
-#    Journal('Semin Cancer Biol', 'Seminars in Cancer Biology')
-#    ]
+journals = [
+     Journal('Free Radic Biol Med', 'Free Radical Biology and Medicine')
+    ]
 
 # Used to collect and report debugging info related to date handling
 class DateTracker:
