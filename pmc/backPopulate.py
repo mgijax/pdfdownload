@@ -119,7 +119,7 @@ import caches
 # global stuff for logging
 # ------------------------
 
-DEBUG = False
+DEBUG = True
 DIAG_LOG = None     # file pointer for debug file
 PDF_LOG_DIR = None          # for output logs
 
@@ -725,12 +725,14 @@ class PMCfileRangler (object):
         debug("%s : full query : %s" % (journalName, query.replace('+', ' ')))
 
         try:
+            debug('query : ' + str(query))
             count, results, webenvURLParams = eulib.getSearchResults("PMC",
                                     query, op='fetch', retmax=maxFiles,
                                     URLReader=self.urlReader, debug=False )
         except Exception as e:
             #text = str(e)
             #progress("eulib.getSearchResults issue/ignore: '%s'\n" % text)
+            debug('eulib.getSearchResults issue')
             count = 0
             results = '<data></data>'   # empty data
 
@@ -740,7 +742,7 @@ class PMCfileRangler (object):
 
         # uncomment to get the xml from each journal - may want to limit the 
         # journal list when debugging
-        debug('results: %s' % results)
+        #debug('results: %s' % results)
 
         resultsE = ET.fromstring(results)
         return count, resultsE, results
@@ -812,9 +814,14 @@ class PMCfileRangler (object):
             art.pmid   = artMetaE.find("article-id/[@pub-id-type='pmid']")
             if art.pmid != None:
                 art.pmid = artMetaE.find("article-id/[@pub-id-type='pmid']").text
+            debug('check art.pmid: %s ' %  art.pmid)
+            debug('check wantArticle: %s ' %  self._wantArticle(art))
             if self._wantArticle(art):  # queue up the download in Dispatcher
+                debug('_wantArticle returned True: %s' % (art.pmid))
                 toDownload = toDownload + 1
-                if self.getPdf:	self._queuePdfFile(art, artE)
+                if self.getPdf:	
+                    debug('self.getPdf: %s' % (art.pmid))
+                    self._queuePdfFile(art, artE)
 
         # Run the Dispatcher, this runs a bunch of downloads concurrently
         progress("Trying to download %d PDFs\n" % toDownload)
@@ -829,6 +836,7 @@ class PMCfileRangler (object):
         """
         self.dispatcher.wait()
 
+        debug('cmds: %s' % self.cmds)
         for i in range(len(self.cmds)):
             idx = self.cmdIndexes[i]
             article = self.articles[i]
@@ -851,6 +859,7 @@ class PMCfileRangler (object):
         """
         ## get the URL to download
         linkUrl = getPdfUrl(article.pmcid)
+        debug('linkUrl: %s' % (linkUrl))
 
         if linkUrl == '':
             self.curReporter.gotNoPdf(article)
@@ -860,7 +869,7 @@ class PMCfileRangler (object):
         if not self.writeFiles: return	# don't really output
 
         # uncomment this to see exactly which PMC IDs will be downloaded
-        # debug('Scheduling PMC%s' % str(article.pmcid))
+        debug('Scheduling PMC%s' % str(article.pmcid))
 
         ## generate desired filename of downloaded PDF
         if article.pmid:
@@ -883,6 +892,7 @@ class PMCfileRangler (object):
     def _wantArticle(self, article):
         """ Return True if we want this article
         """
+
         if not article.pmid:                          # no PMID
             self.curReporter.skipNoPMID(article)
             return False
@@ -891,6 +901,7 @@ class PMCfileRangler (object):
             self.curReporter.skipInMgi(article)
             return False
 
+        debug('_wantArticle:article.type: %s,%s' % (article.type, self.articleTypes))
         if article.type in self.articleTypes:	     # know this type
             if not self.articleTypes[article.type]:  # but don't want it
                 self.curReporter.skipWrongType(article)
@@ -899,6 +910,8 @@ class PMCfileRangler (object):
             self.curReporter.skipNewType(article)
             return False
 
+        debug('_wantArticle:pmid: %s' % (article.pmid))
+        debug('_wantArticle: returning True')
         return True
     # ---------------------
 
@@ -928,6 +941,7 @@ def getPdfUrl(pmcid):
     # get FTP file location on OA FTP site
     baseUrl = 'https://www.ncbi.nlm.nih.gov/pmc/utils/oa/oa.fcgi?id=PMC%s'
     url = baseUrl % str(pmcid)
+    debug('getPdfUrl url: %s' % (url))
     out = surl.readURL(url)	 # no throttle req't for OA, so no throttle 
     #out = self.urlReader.readURL(url)
     ele = ET.fromstring(out)
