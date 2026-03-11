@@ -156,7 +156,7 @@ embargoedJournalDelays = {
     'J Exp Med' : 12,
     'J Neurosci' : 6,
     'J Virol' : 12,
-    'Mol Biol Cell' : 3,
+    'Mol Biol Cell' : 12,
     'Neuropsychopharmacology' : 12,
     'Proc Natl Acad Sci U S A' : 6
     }
