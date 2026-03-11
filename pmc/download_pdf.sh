@@ -53,9 +53,10 @@ fi
 
 # download the file into the directory
 
+echo '/usr/bin/curl $1'
 /usr/bin/curl $1 > ${directory}/${filename}
 if [ $? -ne 0 ]; then
-      #echo "curl failed, removing: ${directory}/${filename}"
+      echo "curl failed, removing: ${directory}/${filename}"
       rm -rf ${directory}/${filename}
       exitIfFailed $? "curl did not complete, removing ${directory}/${filename}"
 fi

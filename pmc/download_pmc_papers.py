@@ -57,8 +57,11 @@ caches.initialize(os.environ['MGI_PUBLICUSER'], os.environ['MGI_PUBLICPASSWORD']
 # which journals do we want to search?  (All are immediate, open-access.  Embargoed journals are below.)
 journals = [
     'Acta Neuropathol Commun',
+    'Adv Sci (Weinh)',
     'Aging (Albany NY)',
     'Aging Cell',
+    'Alzheimers Dement',
+    'Alzheimers Res Ther',
     'Biol Open',
     'Biomed Res Int',
     'Biomolecules',
@@ -72,12 +75,15 @@ journals = [
     'Cell Commun Signal',
     'Cell Death Dis',
     'Cell Mol Gastroenterol Hepatol',
+    'Cell Mol Life Sci',
     'Cell Prolif',
     'Cells',
     'Commun Biol',
     'Dis Model Mech',
     'EBioMedicine',
     'EMBO Mol Med',
+    'EMBO J',
+    'EMBO Rep',
     'eNeuro',
     'Exp Anim',
     'Exp Mol Med',
@@ -113,6 +119,7 @@ journals = [
     'Mol Metab',
     'Mol Neurodegener',
     'Nat Commun',
+    'Neural Regen Res',
     'Nucleic Acids Res', 
     'Oxid Med Cell Longev',
     'Physiol Rep',
@@ -120,21 +127,14 @@ journals = [
     'PLOS Genetics',
     'PLOS ONE',
     'PLoS Pathog',
+    'PNAS Nexus',
     'Redox Biol',
     'Sci Adv',
     'Sci Rep',
     'Skelet Muscle',
     'Stem Cell Reports',
     'Theranostics',
-    'Transl Psychiatry',
-    'EMBO J',
-    'EMBO Rep',
-    'Adv Sci (Weinh)',
-    'Alzheimers Dement',
-    'Alzheimers Res Ther',
-    'Cell Mol Life Sci',
-    'Neural Regen Res',
-    'PNAS Nexus'
+    'Transl Psychiatry'
     ]
 
 # journals that have their content embargoed for a period of time. We need to search them according to their
@@ -144,21 +144,21 @@ journals = [
 embargoedJournalDelays = {
     'Am J Respir Cell Mol Biol' : 12,
     'Autophagy' : 12,
+    'Brain' : 12,
     'Cardiovasc Res' : 12,
     'Cell Death Differ' : 12,
     'Cereb Cortex' : 12,
     'Diabetes' : 12,
     'Genes Dev' : 6,
+    'Genetics' : 12,
     'J Cell Biol' : 12,
     'J Clin Invest' : 3,
     'J Exp Med' : 12,
     'J Neurosci' : 6,
     'J Virol' : 12,
     'Mol Biol Cell' : 3,
-    'Proc Natl Acad Sci U S A' : 6,
-    'Brain' : 12,
-    'Genetics' : 12,
-    'Neuropsychopharmacology' : 12
+    'Neuropsychopharmacology' : 12,
+    'Proc Natl Acad Sci U S A' : 6
     }
 embargoedJournals = list(embargoedJournalDelays.keys())
 embargoedJournals.sort()
