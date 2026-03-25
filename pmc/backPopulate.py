@@ -17,6 +17,7 @@ DEBUG = True
 DIAG_LOG = None     # file pointer for debug file
 PDF_LOG_DIR = None          # for output logs
 PDFDIR = None
+EMBARGOPDFDIR = None
 
 if 'PDFDOWNLOADLOGDIR' in os.environ:
     PDF_LOG_DIR = os.environ['PDFDOWNLOADLOGDIR']
@@ -27,6 +28,11 @@ if 'PDFDIR' in os.environ:
     PDFDIR = os.environ['PDFDIR']
 else:
     raise Exception('Must define PDFDIR')
+
+if 'EMBARGOPDFDIR' in os.environ:
+    EMBARGOPDFDIR = os.environ['EMBARGOPDFDIR']
+else:
+    raise Exception('Must define EMBARGOPDFDIR')
 
 # -------------------------
 # general-purpose functions

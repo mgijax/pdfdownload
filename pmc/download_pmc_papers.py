@@ -136,7 +136,7 @@ journals = [
     'Stem Cell Reports',
     'Theranostics',
     'Transl Psychiatry'
-    ]
+]
 
 # journals that have their content embargoed for a period of time. We need to search them according to their
 # respective time delays.  Each pair is journal title : number of months of delay.  Note that the 
@@ -259,7 +259,6 @@ if __name__ == '__main__':
         config.setBasePath(os.environ['PDFDIR'])
         config.setJournals(journals)
         config.setDateRanges(journalDateRanges)
-        config.setVerbose(False)
         
         if 'PDFDOWNLOADLOGDIR' in os.environ:
             noPdfFile = os.path.join(os.environ['PDFDOWNLOADLOGDIR'], 'noPdfs_pmc.log')
@@ -278,10 +277,9 @@ if __name__ == '__main__':
             journalDateRanges[journal] = dateRange
 
         embConfig = backPopulate.Config()
-        embConfig.setBasePath(os.path.join(os.path.dirname(os.environ['PDFDIR']), 'embargo_PDF_download'))
+        embConfig.setBasePath(os.environ['EMBARGOPDFDIR'])
         embConfig.setJournals(embargoedJournals)
         embConfig.setDateRanges(journalDateRanges)
-        embConfig.setVerbose(False)
         
         if 'PDFDOWNLOADLOGDIR' in os.environ:
             noPdfFile = os.path.join(os.environ['PDFDOWNLOADLOGDIR'], 'embargoedNoPdfs_pmc.log')
