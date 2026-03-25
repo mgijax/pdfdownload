@@ -16,23 +16,11 @@ import mgi_utils
 DEBUG = True
 DIAG_LOG = None     # file pointer for debug file
 PDF_LOG_DIR = None          # for output logs
-PDFDIR = None
-EMBARGOPDFDIR = None
 
 if 'PDFDOWNLOADLOGDIR' in os.environ:
     PDF_LOG_DIR = os.environ['PDFDOWNLOADLOGDIR']
 else:
     raise Exception('Must define PDFDOWNLOADLOGDIR')
-
-if 'PDFDIR' in os.environ:
-    PDFDIR = os.environ['PDFDIR']
-else:
-    raise Exception('Must define PDFDIR')
-
-if 'EMBARGOPDFDIR' in os.environ:
-    EMBARGOPDFDIR = os.environ['EMBARGOPDFDIR']
-else:
-    raise Exception('Must define EMBARGOPDFDIR')
 
 # -------------------------
 # general-purpose functions
@@ -146,7 +134,7 @@ def process(args    # Config object - having params for this function
 
     # Find/write output files & get one (summary) reporter for each
     #   journal/search params
-    pr = PMCfileRangler(basePath=PDFDIR, writeFiles=(not args.noWrite))
+    pr = PMCfileRangler(basePath=args.basePath, writeFiles=(not args.noWrite))
 
     reporters = pr.downloadFiles(journalsToSearch, maxFiles=args.maxFiles)
 
@@ -574,13 +562,13 @@ class PMCfileRangler (object):
 
             for searchParams in journalSearch[journal]:
                 progress("%s\n" % (mgi_utils.date()))
-                progress("Searching %s\n" % (journal))
+                progress("%s: searching\n" % (journal))
                 count, resultsE, results = self._runSearch(journal, searchParams, maxFiles)
-                progress("%d results\n" % (count))
+                progress("%s: results %d\n" % (journal, count))
                 self.curReporter = PMCsearchReporter(journal, searchParams, count, maxFiles)
                 self.reporters.append(self.curReporter)
                 self._processResults(journal, resultsE, results)
-                progress("Done %s downloads\n" % (journal))
+                progress("%s: download done\n" % (journal))
                 progress("%s\n\n" % (mgi_utils.date()))
 
         return self.reporters
@@ -598,8 +586,8 @@ class PMCfileRangler (object):
         progress("Full query: %s\n" % query.replace('+', ' '))
 
         # Search PMC for matching articles
-        debug('%s : searching...' % journalName)
-        debug("%s : full query : %s" % (journalName, query.replace('+', ' ')))
+        debug('%s: searching...' % journalName)
+        debug("%s: full query : %s" % (journalName, query.replace('+', ' ')))
 
         try:
             debug('query : ' + str(query))
@@ -611,8 +599,8 @@ class PMCfileRangler (object):
             count = 0
             results = '<data></data>'   # empty data
 
-        debug('%s : received %s results' % (journalName, count))
-        #debug('%s : %d PMC articles\n" % (query, count))
+        debug('%s: results %s' % (journalName, count))
+        #debug('%s: PMC articles %d\n" % (query, count))
 
         # uncomment to get the xml from each journal - may want to limit the 
         # journal list when debugging
