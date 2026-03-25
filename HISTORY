@@ -1,3 +1,10 @@
+TAG: pdfdownload-6-0-27-?
+DATE: ?
+STAFF: lec
+wts2-1822/Changes to PMC Article Services by August 2026
+deleted download_pdf.sh
+deleted find_pdf_in_tar.py
+
 TAG: pdfdownload-6-0-27-4
 TAG: pdfdownload-6-0-27-3
 TAG: pdfdownload-6-0-27-2
