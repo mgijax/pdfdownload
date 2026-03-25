@@ -1,11 +1,13 @@
 import sys
 import os
-import time
+import re
 import subprocess
 import simpleURLLib as surl
 import NCBIutilsLib as eulib    # lib_py_web/NCBIutilsLib.py
 import xml.etree.ElementTree as ET
+from datetime import date, timedelta
 import caches
+import mgi_utils
 
 # ------------------------
 # global stuff for logging
@@ -14,6 +16,7 @@ import caches
 DEBUG = True
 DIAG_LOG = None     # file pointer for debug file
 PDF_LOG_DIR = None          # for output logs
+PDFDIR = None
 
 if 'PDFDOWNLOADLOGDIR' in os.environ:
     PDF_LOG_DIR = os.environ['PDFDOWNLOADLOGDIR']
@@ -43,10 +46,6 @@ def debug(s, flush = True):
 
     return
     
-def today():
-    # today's date as YYYY/mm/dd
-    return time.strftime('%Y/%m/%d', time.localtime())
-    
 # --------------------------
 # Journals/Search params
 # --------------------------
@@ -68,7 +67,6 @@ class Config:
         self.miceOnly = True
         self.maxFiles = 0
         self.noWrite = False
-        self.verbose = True
         self.noPdfFile = None       # path to write a file of IDs with no PDFs
         return
     
@@ -111,11 +109,6 @@ class Config:
         self.noWrite = noWrite
         return
     
-    def setVerbose(self, verbose):
-            # print more messages
-        self.verbose = verbose
-        return
-    
 # --------------------------
 
 def buildJournalSearch(baseQueryString, journals, dateRanges):
@@ -135,13 +128,11 @@ def buildJournalSearch(baseQueryString, journals, dateRanges):
 def process(args    # Config object - having params for this function
     ):
 
-    debug('process: not getOpenAccessPdf')
+    progress("def process: %s\n" % (mgi_utils.date()))
 
     # just one query string per journal for now
     baseQueryString = "%%s[DP] AND %s" % OPEN_ACCESS_CLAUSE
-
     journalsToSearch = buildJournalSearch(baseQueryString, args.journals, args.dateRanges)
-    startTime = time.time()
 
     if args.miceOnly:		# add mice-only clause to each search
         for j, paramList in journalsToSearch.items():
@@ -149,8 +140,7 @@ def process(args    # Config object - having params for this function
 
     # Find/write output files & get one (summary) reporter for each
     #   journal/search params
-    #pr = PMCfileRangler(basePath=args.basePath, verbose=args.verbose, writeFiles=(not args.noWrite))
-    pr = PMCfileRangler(basePath=PDFDIR, verbose=args.verbose, writeFiles=(not args.noWrite))
+    pr = PMCfileRangler(basePath=PDFDIR, writeFiles=(not args.noWrite))
 
     reporters = pr.downloadFiles(journalsToSearch, maxFiles=args.maxFiles)
 
@@ -161,7 +151,6 @@ def process(args    # Config object - having params for this function
         numPdfs += r.getNumPdfs()
 
     progress("Total PDFs Written: %d\n" %  numPdfs)
-    progress('Total time: %8.2f seconds\n' % (time.time() - startTime) )
 
     if args.noPdfFile:
         noPdfWriter = NoPdfWriter(args.noPdfFile, reporters, args.dateRanges)
@@ -182,12 +171,11 @@ class PMCarticle (object):
 # --------------------------
 
 class PMCsearchReporter (object):
-    """ Class that keeps track of counts/stats for a given journal and search
-    """
+    """ Class that keeps track of counts/stats for a given journal and search """
 
     def __init__(self,
         journal,		# the journal...
-        searchParams,		# ... and search Params to report on
+        searchParams,	# ... and search Params to report on
         count,			# num of articles matched by this search
         maxFiles=0,		# max files from search to process, 0=all
         ):
@@ -200,29 +188,22 @@ class PMCsearchReporter (object):
         self.nResultsProcessed = 0	
         self.nResultsGotPdf = 0		# num PDF files written
 
-        self.skippedByType = {}         # dict of skipped because wrong type
-                                        # {"type name" : [ pmcIDs w/ type] }
+        self.skippedByType = {}     # dict of skipped because wrong type {"type name" : [ pmcIDs w/ type] }
         self.nSkippedByType = 0		# num articles skipped by type
 
-        self.skippedNewType = {}	# dict of new article types found
-                                        #   that we haven't seen before
-                                        # {"new type name" : [ pmcIDs w/ type] }
+        self.skippedNewType = {}	# dict of new article types found that we haven't seen before {"new type name" : [ pmcIDs w/ type] }
         self.nSkippedNewType = 0	# num articles w/ new types
 
-        self.noPdf = []			# [PMCarticle's...]
-                                        #    w/ no PDF we could download
+        self.noPdf = []			    # [PMCarticle's...] w/ no PDF we could download
 
         self.mgiPubmedIds=[]		# [pmIDs] skipped since in MGI
 
-        self.noPubmedId = []            # [pmcIDs] skipped since they don't have PMIDs
+        self.noPubmedId = []        # [pmcIDs] skipped since they don't have PMIDs
 
         self.earliestNoPubmedIdArticle = None # earliest article w/ no PMID
-    # ---------------------
 
     def skipWrongType(self, article,):
-        """ Record that this article has been skipped because it's not a type
-            that we download.
-        """
+        """ Record that this article has been skipped because it's not a type that we download.  """
         self.nSkippedByType += 1
         t = article.type
         if t not in self.skippedByType:
@@ -230,9 +211,7 @@ class PMCsearchReporter (object):
         self.skippedByType[t].append(article.pmcid)
 
     def skipNewType(self, article):
-        """ Record that we found a new article type that we haven't seen before
-            and we are skipping the download for this article
-        """
+        """ Record that we found a new article type that we haven't seen before and we are skipping the download for this article """
         self.nSkippedNewType += 1
         t = article.type
         if t not in self.skippedNewType:
@@ -240,8 +219,7 @@ class PMCsearchReporter (object):
         self.skippedNewType[t].append(article.pmcid)
 
     def skipNoPMID(self, article):
-        """ Record that we are skipping this because PMC doesn't have its PMID
-        """
+        """ Record that we are skipping this because PMC doesn't have its PMID """
         self.noPubmedId.append(article.pmcid)
         # remember earliest article w/ no PMID
         if not self.earliestNoPubmedIdArticle or \
@@ -257,8 +235,7 @@ class PMCsearchReporter (object):
         self.nResultsGotPdf += 1
 
     def gotNoPdf(self, article):
-        """ Tried to download PDF for this article, but couldn't get it.
-        """
+        """ Tried to download PDF for this article, but couldn't get it.  """
         self.noPdf.append(article)
 
     def getNumPdfs(self):
@@ -266,6 +243,7 @@ class PMCsearchReporter (object):
 
     def getReport(self):
         """ Return a summary report (string) for this journal """
+
         output = "Journal: %s\n'%s'\n" % (self.journal, self.searchParams)
 
         output += "%6d %s articles matched search\n" % (self.totalSearchCount, self.journal[:25], )
@@ -319,12 +297,50 @@ class NoPdfWriter (object):
         self.dateRanges = dateRanges
         self.DMMjournal = "Dis Model Mech"      # journal that doesn't provide
         self.hasDMMjournal = self.DMMjournal in self.dateRanges.keys()
+        self.prevFailures = self._getPrevFailures(filePath)
+        self._computeArticleTableTemplate()
 
+    def _getPrevFailures(self, filePath):
+        """
+        Read previous report file, if any.
+        Return dict {'pmcid': n} where n is the number of download_tries
+            made for that pmcid in the previous report file.
+        """
+        # parsing previous noPDF file
+        # regex pattern to match a line containing an article in the file
+        articleLineRegEx = str(r'\A\s*' +                # start of line
+                           r'(\d+)\s+' +                 # PMCID   gr 1
+                           r'(?:\d+|-)\s+' +             # PMID | -
+                           r'(?:(?:\d{4}[/]\d{2}[/]\d{2})|-)\s+' + # date | -
+                           r'\d+\s+' +                   # Weeks_left
+                           r'(\d+)\s+' +                 # download_tries gr 2
+                           r'.+\Z' )                     # journal + end
+        articleLineRe = re.compile(articleLineRegEx)
+
+        prevFailures = {}
+        try:
+            fp = open(filePath, 'r')
+            progress("Reading previous noPDF file '%s'\n" % filePath)
+        except:
+            progress("No previous noPDF file '%s'\n" % filePath)
+            return prevFailures
+
+        for line in fp.readlines():
+            m = articleLineRe.match(line[:-1])
+            if m:
+                pmcid = m.group(1)
+                download_tries = m.group(2)
+                #print("got match: %s : %d" % (str(pmcid),int(download_tries)))
+                prevFailures[str(pmcid)] = int(download_tries)
+
+        fp.close()
+        return prevFailures
+        
     def _formatJournalSummary(self):
         """ Return formated summary of journals searched """
 
-        output  = 'Summary of searches by the pdfdownload product '
-        output += 'as of: %s. Searching:\n' % today()
+        output = '%s\n\n' % (mgi_utils.date())
+        output += 'Summary of searches by the pdfdownload product'
 
         datePlusJournal = lambda x: (x[1],x[0])
         for journal,d in sorted(self.dateRanges.items(), key=datePlusJournal):
@@ -398,6 +414,41 @@ class NoPdfWriter (object):
 
         return articlesDMM, articlesOther
 
+    def _computeArticleTableTemplate(self):
+        """
+        Compute self.template, self.hdrLine, self.dashLine
+            for formatting the output tables of articles that did not download
+        """
+        # define titles and col lengths for the output tables
+        pmTitle = 'PubMed ID'
+        pmcTitle = 'PMC ID'
+        dateTitle = 'Pub Date'
+        weeksTitle = 'Weeks_Left'
+        failuresTitle = "Download_Tries"
+        journalTitle = 'Journal'
+        maxPmLength = len(pmTitle)      # max width of PubMed ID column
+        maxPmcLength = len(pmcTitle)    # max width of PubMed Central ID column
+        dateLength = len('2018/11/17')
+        weeksLength = len(weeksTitle)
+        failuresLength = len(failuresTitle)
+
+        self.weeksLength = weeksLength
+        self.failuresLength = failuresLength
+        
+        for reporter in self.reporters:          # find max length of ID cols
+            for article in reporter.getArticlesWithNoPdfs():
+                if article.pmid:
+                    maxPmLength = max(maxPmLength, len(article.pmid))
+                if article.pmcid:
+                    maxPmcLength = max(maxPmcLength, len(article.pmcid))
+                    
+        # like '%-15s %-12s %10s %4s %3s %s\n'
+        # (The - ensures left-alignment within the set number of characters.)
+        self.template = '%%-%ds %%-%ds %%%ds %%%ds %%%ds %%s\n' % (maxPmcLength, maxPmLength, dateLength, weeksLength, failuresLength)
+        self.hdrLine = self.template % (pmcTitle, pmTitle, dateTitle, weeksTitle, failuresTitle, journalTitle)
+        self.dashLine = self.template % ('-' * maxPmcLength, '-' * maxPmLength, '-' * dateLength, '-' * weeksLength, '-' * failuresLength, '-' * 15)
+        return
+
     def _formatArticleTable(self, articles, label):
         """ Format a table of articles, return the formatted string
         """
@@ -455,8 +506,8 @@ class NoPdfWriter (object):
 # end class NoPdfWriter --------------------
 
 class PMCfileRangler (object):
-    """ Knows how to query PMC and download PDFs from PMC OA FTP site
-    """
+    """ Knows how to query PMC and download PDFs from PMC OA FTP site """
+
     # Article Types we know about, ==True if we want these articles,
     #  ==False if we don't
     # These values are taken from "article-type" attribute of <article>
@@ -485,12 +536,10 @@ class PMCfileRangler (object):
     def __init__(self, 
                 basePath='.',		# base path to write article files files written to basePath/journalName
                 urlReader=surl.ThrottledURLReader(seconds=0.2),
-                verbose=False,
                 writeFiles=True	# =False to not write any files/dirs
                 ):
         self.basePath = basePath
         self.urlReader = urlReader
-        self.verbose = verbose
         self.writeFiles = writeFiles
         self.pubmedWithPDF = caches.PubMedWithPDF()
         self.journalSummary = {}
@@ -505,30 +554,28 @@ class PMCfileRangler (object):
                                         #   search param is PMC query string,
                                         #   typically specifying vol/issue
                                         #   or date range
-                    maxFiles=0,		# max number of matching files to
-                                        #  actually download and store. 0=all
+                    maxFiles=0,		# max number of matching files to actually download and store. 0=all
                     ):
         """ Search all the journals and all their search params.
             Saving files as we go.
-            Return a list of PMCsearchReporters, one for each journal/params
-                combination.
+            Return a list of PMCsearchReporters, one for each journal/params combination.
         """
+
+        progress("def downloadFiles: %s\n" % (mgi_utils.date()))
+
         for journal in sorted(journalSearch.keys()):
             self._createOutputDir(journal)
 
             for searchParams in journalSearch[journal]:
-                progress("\nSearching %s\n" % (journal))
-                startTime = time.time()
+                progress("%s\n" % (mgi_utils.date()))
+                progress("Searching %s\n" % (journal))
                 count, resultsE, results = self._runSearch(journal, searchParams, maxFiles)
-                searchEnd = time.time()
-                progress('%d results - Search time: %9.2f\n' % (count, searchEnd-startTime))
-
+                progress("%d results\n" % (count))
                 self.curReporter = PMCsearchReporter(journal, searchParams, count, maxFiles)
                 self.reporters.append(self.curReporter)
-
                 self._processResults(journal, resultsE, results)
-                processEnd = time.time()
-                progress('Done %s downloads - Process time: %8.2f\n' % (journal, processEnd-searchEnd))
+                progress("Done %s downloads\n" % (journal))
+                progress("%s\n\n" % (mgi_utils.date()))
 
         return self.reporters
     # ---------------------
@@ -559,8 +606,7 @@ class PMCfileRangler (object):
             results = '<data></data>'   # empty data
 
         debug('%s : received %s results' % (journalName, count))
-
-        #if self.verbose: progress( "'%s': %d PMC articles\n" % (query, count))
+        #debug('%s : %d PMC articles\n" % (query, count))
 
         # uncomment to get the xml from each journal - may want to limit the 
         # journal list when debugging
@@ -606,14 +652,13 @@ class PMCfileRangler (object):
                 pubDate = artMetaE.find("pub-date")
                 debug('no pubDate try again artMetaE.find("pub-date"): %s' % pubDate)
 
-            # 2/15/23 new code WTS2-1122
+            # WTS2-1122
             if pubDate:
                 day = '-'
                 month = '-'
                 year = '-'
                 if (pubDate.find('day') != None):
                     day = pubDate.find('day').text.rjust(2,'0')
-                    
                 if (pubDate.find('month') != None):
                     month = pubDate.find('month').text.rjust(2,'0')
                 if (pubDate.find('year') != None):
@@ -631,6 +676,7 @@ class PMCfileRangler (object):
             debug('check art.pmid: %s ' %  art.pmid)
             debug('check art.pmcid: %s ' %  art.pmcid)
             debug('check wantArticle: %s ' %  self._wantArticle(art))
+
             if self._wantArticle(art):  # queue up the download
                 debug('set up aws commands')
                 awsCommands = [
@@ -649,11 +695,11 @@ class PMCfileRangler (object):
                     pmFileName = self.basePath + '/PMID_%s.pdf' % (art.pmid)
                     pmcFileName = self.basePath + '/PMC%s.1.pdf' % (art.pmcid)
                     os.rename(pmcFileName, pmFileName)
-                except subprocess.CalledProcessError as e:
+                except:
                     self.curReporter.gotNoPdf(art)
-                    progress(e)
-        return
+                    progress("aws could not find article: PMC%s\n" % (art.pmcid))
 
+        return
     # ---------------------
 
     def _wantArticle(self, article):
