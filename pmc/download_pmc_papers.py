@@ -261,7 +261,7 @@ if __name__ == '__main__':
         for journal in journals:
             journalDateRanges[journal] = dateRange
 
-        config = backPopulate.Config()
+        config = backPopulate.BPConfig()
         config.setBasePath(os.environ['PDFDIR'])
         config.setJournals(journals)
         config.setDateRanges(journalDateRanges)
@@ -282,7 +282,7 @@ if __name__ == '__main__':
             dateRange = '%s:%s' % (monthsAgo(startDate, journal).replace('-', '/'), stopDate.replace('-', '/'))
             journalDateRanges[journal] = dateRange
 
-        embConfig = backPopulate.Config()
+        embConfig = backPopulate.BPConfig()
         embConfig.setBasePath(os.environ['EMBARGOPDFDIR'])
         embConfig.setJournals(embargoedJournals)
         embConfig.setDateRanges(journalDateRanges)

@@ -7,6 +7,9 @@ import simpleURLLib as surl
 import NCBIutilsLib as eulib    # lib_py_web/NCBIutilsLib.py
 import xml.etree.ElementTree as ET
 from datetime import date, timedelta
+import boto3
+from botocore import UNSIGNED
+from botocore.config import Config
 import caches
 import mgi_utils
 
@@ -60,14 +63,9 @@ for each Journal:
             skip
 
         use the article.pmcid to fetch the PDF from AWS (PMC/Amazon Web Service)
-            ['/usr/local/bin/aws', '--no-sign-request', 's3', 'cp', 's3://pmc-oa-opendata/PMC13013701.1/PMC13013701.1.pdf', '/data/loads/_New_Newcurrent/pdfdownload']
-
-            taking 7 secs per request
-            for 500 requests, this is 7 secs * 500 = 3,500 secs = 58 minutes, 20 secs
     
         if the PDF file has been found by AWS:
             save PMCxxx.1.pdf to PDF output folder (PDFDIR or EMBARGOPDFDIR)
-            rename PMCxxx.1.pdf -> PMID_xxxx.pdf;  see article.pmcid, article.pmid
             these PDFs will be automatically processed by the littriageload
         else:
             add Aricle to "noPdfFile" file: self.curReporter.gotNoPdf(art)
@@ -117,7 +115,7 @@ OPEN_ACCESS_CLAUSE = 'AND has pdf[filter] AND open access[filter] NOT pmc embarg
 
 # defines what config info is expected by this module -- Construct one of these,
 # populate it, and pass it into the process() function.
-class Config:
+class BPConfig:
     def __init__ (self):
         self.basePath = '.'
         self.journals = []
@@ -127,6 +125,7 @@ class Config:
         self.maxFiles = 0
         self.noWrite = False
         self.noPdfFile = None       # path to write a file of IDs with no PDFs
+        self.pmcS3 = None
         return
     
     def setNoPdfFile(self, noPdfFile):
@@ -605,6 +604,7 @@ class PMCfileRangler (object):
         self.curOutputDir = ''
         self.reporters = []
         self.curReporter = None		# current reporter (for journal/search)
+        self.pmcS3 = boto3.client('s3', config=Config(signature_version=UNSIGNED))
 
     # ---------------------
 
@@ -777,29 +777,20 @@ class PMCfileRangler (object):
 
             if self._wantArticle(art):  # queue up the download
                 start = time.perf_counter()
-                debug('set up aws commands')
-                awsCommands = [
-                    '/usr/local/bin/aws',
-                    '--no-sign-request',
-                    's3',
-                    'cp',
-                    's3://pmc-oa-opendata/PMC%s.1/PMC%s.1.pdf' % (art.pmcid, art.pmcid),
-                    '%s' % (self.basePath)
-                ]
-                debug(awsCommands)
+                bucket_name = 'pmc-oa-opendata'
+                object_key = 'PMC%s.1/PMC%s.1.pdf' % (art.pmcid, art.pmcid)
+                local_file_name = '%s/PMID_%s.pdf' % (self.basePath, art.pmid)
+                progress('%s, %s, %s\n' % (bucket_name, object_key, local_file_name))
+
                 try:
-                    results = subprocess.run(awsCommands, capture_output=True, text=True, check=True, shell=False, close_fds=False)
-                    debug('awsResults: %s' % str(results))
+                    self.pmcS3.download_file(bucket_name, object_key, local_file_name)
                     self.curReporter.gotPdf(art)
-                    pmFileName = self.basePath + '/PMID_%s.pdf' % (art.pmid)
-                    pmcFileName = self.basePath + '/PMC%s.1.pdf' % (art.pmcid)
-                    os.rename(pmcFileName, pmFileName)
-                except:
+                except Exception as e:
                     self.curReporter.gotNoPdf(art)
-                    progress("aws not found: PMC%s\n" % (art.pmcid))
+                    progress(f"pmc error: {e}\n")
 
                 end = time.perf_counter()
-                debug(f"Subprocess finished in {end - start:.4f}s")
+                progress(f"pmc subprocess finished in {end - start:.4f}s\n")
 
         return
     # ---------------------
