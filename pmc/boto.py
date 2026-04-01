@@ -1,6 +1,9 @@
 #
 # For testing boto3 with PMC
 #
+# to test from command line:
+# aws --no-sign-request s3 cp s3://pmc-oa-opendata/PMC12930826.1/PMC12930826.1.pdf .
+#
 
 import boto3
 from botocore import UNSIGNED
