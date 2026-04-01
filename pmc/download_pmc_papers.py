@@ -137,9 +137,9 @@ journals = [
     'Theranostics',
     'Transl Psychiatry'
 ]
-journals = [
-    'Front Immunol',
-]
+#journals = [
+#    'Front Immunol',
+#]
 
 # journals that have their content embargoed for a period of time. We need to search them according to their
 # respective time delays.  Each pair is journal title : number of months of delay.  Note that the 
@@ -163,9 +163,9 @@ embargoedJournalDelays = {
     'Neuropsychopharmacology' : 12,
     'Proc Natl Acad Sci U S A' : 6
     }
-embargoedJournalDelays = {
-    'Am J Respir Cell Mol Biol' : 12,
-}
+#embargoedJournalDelays = {
+#    'Am J Respir Cell Mol Biol' : 12,
+#}
 embargoedJournals = list(embargoedJournalDelays.keys())
 embargoedJournals.sort()
 
