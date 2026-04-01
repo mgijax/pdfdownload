@@ -49,8 +49,8 @@ for envVar in [ 'PG_DBSERVER', 'PG_DBNAME', 'MGI_PUBLICUSER', 'MGI_PUBLICPASSWOR
     if envVar not in os.environ:
         raise Exception('Missing environment variable: %s' % envVar)
 
-caches.initialize(os.environ['MGI_PUBLICUSER'], os.environ['MGI_PUBLICPASSWORD'],
-    os.environ['PG_DBSERVER'], os.environ['PG_DBNAME'])
+# initialize the cache of pubmedids tha exist in MGI
+caches.initialize(os.environ['MGI_PUBLICUSER'], os.environ['MGI_PUBLICPASSWORD'], os.environ['PG_DBSERVER'], os.environ['PG_DBNAME'])
 
 ###--- Globals ---###
 
@@ -137,6 +137,9 @@ journals = [
     'Theranostics',
     'Transl Psychiatry'
 ]
+#journals = [
+#    'Front Immunol',
+#]
 
 # journals that have their content embargoed for a period of time. We need to search them according to their
 # respective time delays.  Each pair is journal title : number of months of delay.  Note that the 
@@ -160,6 +163,9 @@ embargoedJournalDelays = {
     'Neuropsychopharmacology' : 12,
     'Proc Natl Acad Sci U S A' : 6
     }
+#embargoedJournalDelays = {
+#    'Am J Respir Cell Mol Biol' : 12,
+#}
 embargoedJournals = list(embargoedJournalDelays.keys())
 embargoedJournals.sort()
 
