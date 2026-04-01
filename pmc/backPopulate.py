@@ -8,7 +8,7 @@ import NCBIutilsLib as eulib    # lib_py_web/NCBIutilsLib.py
 import xml.etree.ElementTree as ET
 from datetime import date, timedelta
 
-# this package is used to communicate with AWS/PMC api
+# this package is used to communicate with AWS/PMC
 import boto3
 from botocore import UNSIGNED
 from botocore.config import Config
@@ -610,7 +610,7 @@ class PMCfileRangler (object):
         self.curOutputDir = ''
         self.reporters = []
         self.curReporter = None		# current reporter (for journal/search)
-        self.pmcS3 = boto3.client('s3', config=Config(signature_version=UNSIGNED))
+        self.pmcS3 = boto3.client('s3', config=Config(signature_version=UNSIGNED)) # start boto3 client
 
     # ---------------------
 
