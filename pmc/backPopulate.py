@@ -2,12 +2,77 @@ import sys
 import os
 import re
 import subprocess
+import time
 import simpleURLLib as surl
 import NCBIutilsLib as eulib    # lib_py_web/NCBIutilsLib.py
 import xml.etree.ElementTree as ET
 from datetime import date, timedelta
 import caches
 import mgi_utils
+
+'''
+
+backPopulate.process() is called from download_pmc_papers.py
+
+for each Journal:
+
+    use the Journal, etc. to search for the list of Articles of interest
+    via import NCBIutilsLib as eulib from lib_py_web/NCBIutilsLib.py
+
+    run eutils/esearch to execute the search
+        https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi
+
+        see MICE_CLAUSE, OPEN_ACCESS_CLAUSE which is used to generate this format:
+
+        https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?
+         &api_key=93420e6fa0a8dcf419d7a62e185706572e08
+         &usehistory=y
+         &db=PMC
+         &term="Acta+Neuropathol+Commun"[TA]+AND+2026/01/25:2029/03/25[DP]
+           +AND+open+access[filter]
+           +AND+(mice[Title]+OR+mice[Abstract]+OR+mice[Body+-+All+Words])
+         &retmode=xml
+
+    run eutils/efetch to fetch the full data record in xml format
+        https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi
+
+         https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?&api_key=93420e6fa0a8dcf419d7a62e185706572e08
+          &webenv=MCID_69c50e90a186cd376b05ecef
+          &query_key=1
+          &db=PMC
+          &retmode=xml
+          &version=2.0
+          &retmax=10000
+
+    for each Article:
+
+        if the Article does not have a PubMed Id:
+            self.curReporter.skipNoPMID(article)
+            skip
+
+        if the Article already exists in MGI (self.pubmedWithPDF.contains(article.pmid))
+            self.curReporter.skipInMgi(article)
+            skip
+
+        if the Article is of the wrong Type or new Type (not in our list):
+            self.curReporter.skipWrongType(article)
+            self.curReporter.skipNewType(article)
+            skip
+
+        use the article.pmcid to fetch the PDF from AWS (PMC/Amazon Web Service)
+            ['/usr/local/bin/aws', '--no-sign-request', 's3', 'cp', 's3://pmc-oa-opendata/PMC13013701.1/PMC13013701.1.pdf', '/data/loads/_New_Newcurrent/pdfdownload']
+
+            taking 7 secs per request
+            for 500 requests, this is 7 secs * 500 = 3,500 secs = 58 minutes, 20 secs
+    
+        if the PDF file has been found by AWS:
+            save PMCxxx.1.pdf to PDF output folder (PDFDIR or EMBARGOPDFDIR)
+            rename PMCxxx.1.pdf -> PMID_xxxx.pdf;  see article.pmcid, article.pmid
+            these PDFs will be automatically processed by the littriageload
+        else:
+            add Aricle to "noPdfFile" file: self.curReporter.gotNoPdf(art)
+            these PDFs will have to be manually downloaded
+'''
 
 # ------------------------
 # global stuff for logging
@@ -47,8 +112,8 @@ def debug(s, flush = True):
 # eutils PMC search clause to include only mice papers
 MICE_CLAUSE = '(mice[Title] OR mice[Abstract] OR mice[Body - All Words])'
 
-# eutils PMC search clause to restrict PMC search to open access articles
-OPEN_ACCESS_CLAUSE = 'open access[filter]'
+# eutils PMC search clause to restrict PMC search to has pdf, open access articles, not embargo
+OPEN_ACCESS_CLAUSE = 'AND has pdf[filter] AND open access[filter] NOT pmc embargo[filter]'
 
 # defines what config info is expected by this module -- Construct one of these,
 # populate it, and pass it into the process() function.
@@ -125,15 +190,14 @@ def process(args    # Config object - having params for this function
     progress("def process: %s\n" % (mgi_utils.date()))
 
     # just one query string per journal for now
-    baseQueryString = "%%s[DP] AND %s" % OPEN_ACCESS_CLAUSE
+    baseQueryString = "%%s[DP] %s" % OPEN_ACCESS_CLAUSE
     journalsToSearch = buildJournalSearch(baseQueryString, args.journals, args.dateRanges)
 
     if args.miceOnly:		# add mice-only clause to each search
         for j, paramList in journalsToSearch.items():
            journalsToSearch[j] = ["%s AND %s" % (p, MICE_CLAUSE) for p in paramList]
 
-    # Find/write output files & get one (summary) reporter for each
-    #   journal/search params
+    # Find/write output files & get one (summary) reporter for each journal/search params
     pr = PMCfileRangler(basePath=args.basePath, writeFiles=(not args.noWrite))
 
     reporters = pr.downloadFiles(journalsToSearch, maxFiles=args.maxFiles)
@@ -273,6 +337,7 @@ class PMCsearchReporter (object):
             debug('%s : %d articles w/ PDF download problem' % (self.journal, len(self.noPdf)))
             output += "%6d Articles w/ PDF download problem:\n" % len(self.noPdf)
             output += '\tPMID ' + ', '.join(map(str, [a.pmid for a in self.noPdf])) + '\n'
+
         return output
 
     def getArticlesWithNoPdfs(self):
@@ -381,6 +446,7 @@ class NoPdfWriter (object):
             journal = reporter.journal
             #debug('journal: %s' % journal)
             startDate = self.dateRanges[journal].split(':')[0]
+            #debug('startDate: %s' % str(startDate))
             startDate = startDate.replace('/', '-')
             startDate = date.fromisoformat(startDate) # for this journal
 
@@ -390,11 +456,12 @@ class NoPdfWriter (object):
                     article.pmcid = '-'
                 if not article.pmid:    # shouldn't happen now we only get
                     article.pmid = '-'  #   papers w/ PMIDs
-                #debug('article.date: %s' % article.date)
+                #debug('article.date: %s' % (article.date))
                 if not article.date:
                     article.date = '-'
                     article.numWeeks = 0
                 else:
+                    article.date = article.date.replace('-','01')
                     dateObj = date.fromisoformat(article.date.replace('/','-'))
                     delta = dateObj - startDate
                     article.numWeeks = delta.days // 7
@@ -447,8 +514,8 @@ class NoPdfWriter (object):
         """ Format a table of articles, return the formatted string
         """
 
-        output = '%s that need manual download (%d total)\n' %  \
-                                            (label, len(articles))
+        output = '%s that need manual download (%d total)\n' % (label, len(articles))
+
         if articles:
             output += self.hdrLine
             output += self.dashLine
@@ -502,10 +569,8 @@ class NoPdfWriter (object):
 class PMCfileRangler (object):
     """ Knows how to query PMC and download PDFs from PMC OA FTP site """
 
-    # Article Types we know about, ==True if we want these articles,
-    #  ==False if we don't
-    # These values are taken from "article-type" attribute of <article>
-    #  tag in PMC eutils fetch output
+    # Article Types we know about, ==True if we want these articles, ==False if we don't
+    # These values are taken from "article-type" attribute of <article> tag in PMC eutils fetch output
     articleTypes = {'research-article': True,
                     'review-article': True,
                     'other': True,
@@ -589,11 +654,34 @@ class PMCfileRangler (object):
         debug('%s: searching...' % journalName)
         debug("%s: full query : %s" % (journalName, query.replace('+', ' ')))
 
+        #
+        # set "debug=True", if needed
+        #
+        # Search
+        # https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?
+        # &api_key=93420e6fa0a8dcf419d7a62e185706572e08
+        # &usehistory=y
+        # &db=PMC
+        # &term="Acta+Neuropathol+Commun"[TA]+AND+2026/01/25:2029/03/25[DP]
+        #   +AND+open+access[filter]
+        #   +AND+(mice[Title]+OR+mice[Abstract]+OR+mice[Body+-+All+Words])
+        # &retmode=xml
+        #
+        # Fetch
+        # https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?&api_key=93420e6fa0a8dcf419d7a62e185706572e08
+        # &webenv=MCID_69c50e90a186cd376b05ecef
+        # &query_key=1
+        # &db=PMC
+        # &retmode=xml
+        # &version=2.0
+        # &retmax=10000
+        #
+
         try:
             debug('query : ' + str(query))
             count, results, webenvURLParams = eulib.getSearchResults("PMC",
                                     query, op='fetch', retmax=maxFiles,
-                                    URLReader=self.urlReader, debug=False )
+                                    URLReader=self.urlReader, debug=True)
         except Exception as e:
             debug('eulib.getSearchResults issue')
             count = 0
@@ -662,16 +750,33 @@ class PMCfileRangler (object):
                 art.date = '-'
  
             art.pmcid  = artMetaE.find("article-id/[@pub-id-type='pmcaid']").text
+            #art.pmcidver  = artMetaE.find("article-id/[@pub-id-type='pmcid-ver']").text
             art.pmid   = artMetaE.find("article-id/[@pub-id-type='pmid']")
 
             if art.pmid != None:
                 art.pmid = artMetaE.find("article-id/[@pub-id-type='pmid']").text
 
+            # if art.isEmbargo = "no", then PMC should be in AWS
+            # if art.isEmbargo = "yes", then PMC is not in AWS
+            art.isEmbargo = "no"
+            art.isOpenAccess = "yes"
+            for emeta in artMetaE.find('custom-meta-group'):
+                meta_name = emeta.find("meta-name")
+                if meta_name is not None and meta_name.text == "pmc-status-embargo":
+                    art.isEmbargo = emeta.find("meta-value").text
+                    debug('meta_name/value: %s %s' % (meta_name.text, emeta.find("meta-value").text))
+                if meta_name is not None and meta_name.text == "pmc-prop-open-access":
+                    art.isOpenAccess = emeta.find("meta-value").text
+                    debug('meta_name/value: %s %s' % (meta_name.text, emeta.find("meta-value").text))
+
             debug('check art.pmid: %s ' %  art.pmid)
             debug('check art.pmcid: %s ' %  art.pmcid)
-            debug('check wantArticle: %s ' %  self._wantArticle(art))
+            #debug('check art.isEmbargo: %s ' %  art.isEmbargo)
+            #debug('check art.isOpenAccess: %s ' %  art.isOpenAccess)
+            #debug('check wantArticle: %s ' %  self._wantArticle(art))
 
             if self._wantArticle(art):  # queue up the download
+                start = time.perf_counter()
                 debug('set up aws commands')
                 awsCommands = [
                     '/usr/local/bin/aws',
@@ -683,15 +788,18 @@ class PMCfileRangler (object):
                 ]
                 debug(awsCommands)
                 try:
-                    results = subprocess.run(awsCommands, capture_output=True, text=True, check=True)
-                    debug('awsReults: %s' % str(results))
+                    results = subprocess.run(awsCommands, capture_output=True, text=True, check=True, shell=False, close_fds=False)
+                    debug('awsResults: %s' % str(results))
                     self.curReporter.gotPdf(art)
                     pmFileName = self.basePath + '/PMID_%s.pdf' % (art.pmid)
                     pmcFileName = self.basePath + '/PMC%s.1.pdf' % (art.pmcid)
                     os.rename(pmcFileName, pmFileName)
                 except:
                     self.curReporter.gotNoPdf(art)
-                    progress("aws could not find article: PMC%s\n" % (art.pmcid))
+                    progress("aws not found: PMC%s\n" % (art.pmcid))
+
+                end = time.perf_counter()
+                debug(f"Subprocess finished in {end - start:.4f}s")
 
         return
     # ---------------------
@@ -699,6 +807,16 @@ class PMCfileRangler (object):
     def _wantArticle(self, article):
         """ Return True if we want this article
         """
+
+        # if art.isEmbargo = "no", then PMC should be in AWS
+        # if art.isEmbargo = "yes", then PMC is not in AWS
+        if article.isEmbargo == "yes":
+            self.curReporter.gotNoPdf(article)
+            return False
+
+        if article.isOpenAccess == "no":
+            self.curReporter.gotNoPdf(article)
+            return False
 
         if not article.pmid:                          # no PMID
             self.curReporter.skipNoPMID(article)

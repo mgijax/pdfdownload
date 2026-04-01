@@ -1,0 +1,79 @@
+Hi Lori,
+ 
+Thank you for contacting the National Library of Medicine (NLM) at the National Institutes of Health (NIH). And thanks for working with our new PMC Article Dataset format on AWS. I also appreciate the extra examples you followed up with.
+ 
+From your email, I’m not clear on your pipeline, however, if you are processing articles based on search results, you can reduce unnecessary retrieval attempts by filtering for articles that have downloadable PDFs. 
+ 
+The recent example you provided of an article is a case where you've bumped into some complexities of PMC and the PMC Article Dataset.
+ 
+For your example: 
+https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pmc&id=12618867retmode=xml
+ 
+The journal does deposit open access content, but the version we have live in PMC currently is an author manuscript version, deposited because the journal version is currently embargoed, and the author needed this article in PMC to meet a public access mandate. 
+ 
+<custom-meta>
+<meta-name>pmc-prop-open-access</meta-name>
+<meta-value>no</meta-value>
+</custom-meta>
+ 
+You say: This says that this journal is *not* open access, but my MGI person assures me that it is
+ 
+Our custom meta is for the version of the article that is currently the default displayed version on PMC.
+ 
+Further examination of the eFetch results shows:
+ 
+<article-id pub-id-type="pmcid-ver">PMC12618867.2</article-id>
+ 
+<custom-meta>
+     <meta-name>pmc-prop-manuscript</meta-name>
+     <meta-value>yes</meta-value>
+</custom-meta>
+ 
+The data you pulled is for version 2, which is an author manuscript version:
+ 
+Version 1, the open access publisher version is embargoed:
+https://pmc.ncbi.nlm.nih.gov/articles/PMC12618867.1/
+ 
+And while version 2 is available to read and to download the XML and plain text, it does not have a Creative Commons license, and by our policy PMC is unable to make the author manuscript PDF file available as part of the PMC Article Datasets. 
+ 
+I believe using the filters below will make things easier to return only articles for which you may retrieve PDF files successfully.
+ 
+For PMC searches, the following filters may be helpful:
+•	has pdf[filter] — returns only articles with PDFs available
+•	open access[filter] — limits to articles in the PMC Open Access Subset
+•	pmc embargo[filter] — identifies embargoed articles (you can exclude these with NOT)
+
+ 
+You could include all of them with your current search, for example:
+ 
+[your query] AND has pdf[filter] AND open access[filter] NOT pmc embargo[filter]
+ 
+If you are starting from PubMed, these filters may also be useful:
+•	pubmed pmc open access[filter] — limits to the PMC Open Access Subset
+•	pubmed pmc embargo[filter] — identifies embargoed articles (can be excluded with NOT)
+ 
+With regard to the efficiency and slowness of your new method, it appears you are using the AWS CLI s3 cp command, which attempts to download the file. If you first want to check whether an article is available for retrieval there are a number of different approaches you can take.
+ 
+1.	Run an eutils esearch: ("open access"[sb] OR "open manuscript"[sb]) AND 123456[uid]
+
+https://pmc.ncbi.nlm.nih.gov/search/?term=%28%22open+access%22%5Bsb%5D+OR++%22open+manuscript%22%5Bsb%5D%29+AND+13901%5Buid%5D+&sort=relevance&size=10&display_snippets=show
+
+You may add “has pdf”[sb] to filter out open access articles that do not have PDFs available (some publishers do not make PDFs available for their articles).  If your desired API search returns a PMCID, then the article’s files (XML, plain TXT, and  PDF if you have added has pdf[sb]) are available for retrieval. 
+2.	Download or process in the Cloud the latest inventory, see “Accessing the Inventory”  on the documentation page Accessing PMC Article Datasets Using Amazon Web Services and check for each PMCID to see if the article is available. NOTE: This will not tell  you if a PDF is available, to do that you would need to read the JSON metadata file and see if a PDF file is listed. 
+3.	Use the s3api  list objects command:
+
+aws s3api list-objects-v2 --bucket pmc-oa-opendata --prefix "PMC12810641." --delimiter "/" --query "CommonPrefixes[].Prefix" --output "text" --no-sign-request
+4.	Assume a version 1 is present (99.9% of all articles in PMC only have a version 1)  and  list it:
+
+aws s3 ls s3://pmc-oa-opendata/PMC12810641.1 --no-sign-request 
+5.	use s3api head-object, which returns metadata if the object exists or an error if it does not. 
+
+aws s3api head-object --bucket pmc-oa-opendata --key PMC12912995.1/PMC12912995.1.pdf --no-sign-request
+ 
+I hope this information is helpful and we would be happy to hear what path you end up using. If you have additional questions or feedback about our new data structures please reach out again.
+ 
+Kind regards,
+ 
+PMC Help Desk
+NCBI / NLM / NIH
+
