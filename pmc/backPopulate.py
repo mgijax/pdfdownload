@@ -7,9 +7,12 @@ import simpleURLLib as surl
 import NCBIutilsLib as eulib    # lib_py_web/NCBIutilsLib.py
 import xml.etree.ElementTree as ET
 from datetime import date, timedelta
+
+# this package is used to communicate with AWS/PMC api
 import boto3
 from botocore import UNSIGNED
 from botocore.config import Config
+
 import caches
 import mgi_utils
 
@@ -63,6 +66,9 @@ for each Journal:
             skip
 
         use the article.pmcid to fetch the PDF from AWS (PMC/Amazon Web Service)
+        to download PDF files from the public pmc-oa-opendata S3 bucket using Python and boto3, 
+        initialize a client with unsigned configuration to avoid credentials requirements. 
+        Use the download_file method, specifying the bucket (pmc-oa-opendata), object key (path to PDF), and local filename.
     
         if the PDF file has been found by AWS:
             save PMCxxx.1.pdf to PDF output folder (PDFDIR or EMBARGOPDFDIR)
@@ -782,6 +788,9 @@ class PMCfileRangler (object):
                 local_file_name = '%s/PMID_%s.pdf' % (self.basePath, art.pmid)
                 progress('%s, %s, %s\n' % (bucket_name, object_key, local_file_name))
 
+                # to download PDF files from the public pmc-oa-opendata S3 bucket use package boto3 
+                # initialize a client with unsigned configuration to avoid credentials requirements. 
+                # use the download_file method, specifying the bucket (pmc-oa-opendata), object key (path to PDF), and local filename.
                 try:
                     self.pmcS3.download_file(bucket_name, object_key, local_file_name)
                     self.curReporter.gotPdf(art)
