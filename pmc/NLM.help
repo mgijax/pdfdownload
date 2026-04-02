@@ -77,3 +77,35 @@ Kind regards,
 PMC Help Desk
 NCBI / NLM / NIH
 
+Hi Lori,
+
+It is indeed some of our more complicated cases that you are coming up against.  I’ve explained each of your examples below.
+
+1. https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pmc&id=12448109&retmode=xml
+We have two versions of this, the first is an author manuscript without a CC license.  If you want the PDF, you'll need to use PMC12448109.2 in the Cloud retrieval.
+
+2. https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pmc&id=12704788&retmode=xml
+The current version that isn't embargoed is version 2 and is an author manuscript with a CC license, so you'd need to retrieve the PDF using PMC12704788.2 to get that PDF. The final published version is PMC12704788.1 and is under embargo currently.
+
+You can look at versions on our website by simply adding the version number at the end of the PMCID, e.g.
+https://pmc.ncbi.nlm.nih.gov/articles/PMC12704788.1/
+https://pmc.ncbi.nlm.nih.gov/articles/PMC12704788.2/
+
+3. https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pmc&id=12773744&retmode=xml
+Similar to the one above, version 2 has the PDF currently, version 1 has a PDF, but is embargoed.
+
+4. https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pmc&id=12988593&retmode=xml
+Version 1 and 2 are currently available, but if you used PMC12988593.1 you will be attempting to retrieve the author manuscript version which does not have a CC license and the PDF is therefore not available to retrieve.
+
+5. https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pmc&id=12974474retmode=xml
+Same as example 2 above.
+
+You may need to write some code to check if there are multiple versions of the article you are interested in and then check the json metadata file for each version to find if one has a PDF.
+
+Please let me know if this is helpful and if you have any additional questions.
+
+Kind regards,
+
+PMC Help Desk
+NCBI / NLM / NIH
+
