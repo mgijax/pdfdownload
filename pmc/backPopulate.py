@@ -35,7 +35,9 @@ for each Journal:
          &usehistory=y
          &db=PMC
          &term="Acta+Neuropathol+Commun"[TA]+AND+2026/01/25:2029/03/25[DP]
+           +AND+has+pdf[filter]
            +AND+open+access[filter]
+           +NOT+pmc+embargo[filter]
            +AND+(mice[Title]+OR+mice[Abstract]+OR+mice[Body+-+All+Words])
          &retmode=xml
 
