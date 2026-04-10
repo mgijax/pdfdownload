@@ -798,7 +798,7 @@ class PMCfileRangler (object):
                     self.curReporter.gotPdf(art)
                 except Exception as e:
                     self.curReporter.gotNoPdf(art)
-                    progress(f"pmc skipped/embargoed: {e}\n")
+                    #progress(f"pmc skipped/embargoed: {e}\n")
 
                 end = time.perf_counter()
                 progress(f"pmc subprocess finished in {end - start:.4f}s\n")
