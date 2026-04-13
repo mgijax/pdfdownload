@@ -17,7 +17,7 @@ import re
 import time
 import caches
 import SciDirectLib
-import MapCache
+#import MapCache
 import PubMedAgent
 
 USAGE = '''Usage: %s [yyyy-mm-dd] [yyyy-mm-dd] ['journal name']
@@ -163,9 +163,9 @@ journals = [
     Journal('Semin Cancer Biol', 'Seminars in Cancer Biology')
     ]
 
-journals = [
-     Journal('Free Radic Biol Med', 'Free Radical Biology and Medicine')
-    ]
+#journals = [
+#     Journal('Free Radic Biol Med', 'Free Radical Biology and Medicine')
+#    ]
 
 # Used to collect and report debugging info related to date handling
 class DateTracker:

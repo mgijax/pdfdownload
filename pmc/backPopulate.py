@@ -644,6 +644,12 @@ class PMCfileRangler (object):
                 progress("%s: download done\n" % (journal))
                 progress("%s\n\n" % (mgi_utils.date()))
 
+        # boto3 clients generally do not require an explicit "end" command. 
+        # They use HTTP connection pooling and rely on Python’s garbage collector to clean up 
+        # resources when the object goes out of scope.
+        #progress("close pmcS3 client\n" % (mgi_utils.date()))
+        #self.pmcS3.close()
+
         return self.reporters
     # ---------------------
 
