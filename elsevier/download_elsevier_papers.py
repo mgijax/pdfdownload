@@ -17,7 +17,6 @@ import re
 import time
 import caches
 import SciDirectLib
-#import MapCache
 import PubMedAgent
 
 USAGE = '''Usage: %s [yyyy-mm-dd] [yyyy-mm-dd] ['journal name']
@@ -37,8 +36,8 @@ for envVar in [ 'PG_DBSERVER', 'PG_DBNAME', 'MGI_PUBLICUSER', 'MGI_PUBLICPASSWOR
     if envVar not in os.environ:
         raise Exception('Missing environment variable: %s' % envVar)
 
-caches.initialize(os.environ['MGI_PUBLICUSER'], os.environ['MGI_PUBLICPASSWORD'], os.environ['PG_DBSERVER'], os.environ['PG_DBNAME'])
 # cache of papers already in the MGI db that have PDFs
+caches.initialize(os.environ['MGI_PUBLICUSER'], os.environ['MGI_PUBLICPASSWORD'], os.environ['PG_DBSERVER'], os.environ['PG_DBNAME'])
 pubmedWithPDF = caches.PubMedWithPDF()
 
 # Load API key and Jax institution token from config file
@@ -162,7 +161,6 @@ journals = [
     Journal('Neuroscience', 'Neuroscience'),
     Journal('Semin Cancer Biol', 'Seminars in Cancer Biology')
     ]
-
 #journals = [
 #     Journal('Free Radic Biol Med', 'Free Radical Biology and Medicine')
 #    ]
@@ -380,7 +378,7 @@ def getStandardDateFormat(pmd):
     return '%s-%s-%s' % (yyyy, mm, dd)
     
 def downloadPapers (journal, results, startDate, stopDate):
-    # Given our journal and and set of results, download all the PDFs that were published by the stopDate.
+    # Given our journal and set of results, download all the PDFs that were published by the stopDate.
     # (The start date was considered in the search, but the stop date is not.  So we need to handle that here.)
     
     longName = journal.elsevierName         # long-form of the desired journal name
@@ -409,22 +407,22 @@ def downloadPapers (journal, results, startDate, stopDate):
         # skip any papers we already have in the database
         if pubmedWithPDF.contains(pmid):
             inMGI = inMGI + 1
-            #debug('paper is already in MGI; skipping: %s' % (pmid))
+            debug('paper is already in MGI; skipping: %s' % (pmid))
             continue
         
         if pmid != 'no PMID':
             pmRef = pmAgent.getReferenceInfo(pmid)
             if pmRef != None:
                 publicationDates[pmid] = getStandardDateFormat(pmRef.getDate())
-                #debug('journal.mgiName: %s pmid: %s publicationDates[pmid]: %s' % (journal.mgiName, pmid, publicationDates[pmid]))
+                debug('journal.mgiName: %s pmid: %s publicationDates[pmid]: %s' % (journal.mgiName, pmid, publicationDates[pmid]))
             dateTracker.track(journal.elsevierName, pmRef.getDate(), publicationDates[pmid])
         else:
             # Uncomment this to collect info on pii IDs (internal to SciDirect) that cannot be mapped to PubMed IDs.
-            #debug('No PMID for pii %s, title: %s' % (r.getPii(), r.getTitle()))
+            debug('No PMID for pii %s, title: %s' % (r.getPii(), r.getTitle()))
             pass
                 
         if pmid not in publicationDates:
-            #debug('   > missing date for pii %s, pmid %s' % (r.getPii(), pmid))
+            debug('   > missing date for pii %s, pmid %s' % (r.getPii(), pmid))
             missed = missed + 1
 
         totalCount = totalCount + 1

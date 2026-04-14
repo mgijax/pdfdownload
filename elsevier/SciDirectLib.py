@@ -64,9 +64,11 @@ There are automated tests for this module: # includes usage examples
 import json, time, os, logging
 import urllib.request
 from copy import deepcopy
+import caches
 
 LOGDIR = './logs'
 logger = None
+doiWithPDF = None
 
 def get_logger(name):
     ## Adapted from https://docs.python.org/3/howto/logging-cookbook.html
@@ -103,10 +105,13 @@ def get_logger(name):
 
 def initLogger(logDir):
     # set the logger directory and initialize the logger
-    global LOGDIR, logger
+    global LOGDIR, logger, doiWithPDF
 
     LOGDIR = logDir
     logger = get_logger(__name__)
+    caches.initialize(os.environ['MGI_PUBLICUSER'], os.environ['MGI_PUBLICPASSWORD'], os.environ['PG_DBSERVER'], os.environ['PG_DBNAME'])
+    doiWithPDF = caches.DOICache()
+
     return
     
 url_base = "https://api.elsevier.com/"
@@ -126,6 +131,7 @@ class ElsClient(object):
         """
         self.api_key = api_key
         self.inst_token = inst_token
+
     # end __init__() -----------------
 
     def execGetRequest(self, URL, contentType='json'):
@@ -166,6 +172,7 @@ class ElsClient(object):
         except:
             print('issue completing urllib.request.urlopen(req) for URL: %s' % URL) 
             return 1
+
         self.__ts_last_req = time.time()
         self._status_code=res.code
 
@@ -385,20 +392,26 @@ class SciDirectReference(object):
     #def getAbstract(self):     # not supported for now, see _getDetails()
     #    self._getDetails()
     #    return self._abstract
-    def getVolume(self):
-        self._getDetails()
-        return self._volume
+    #def getVolume(self):
+    #   self._getDetails()
+    #    return self._volume
     def getDetails(self):
         self._getDetails()
         return self._detailFields
 
     def _getDetails(self):
-        """ load the reference details from the API if they have not already
-            been loaded.
+        """ load the reference details from the API if they have not already been loaded.
         """
+
         if not self._detailFields:
             # This URL gets full info including full text and abstract
             #url = url_base + 'content/article/pii/' + str(self._pii)
+
+            # If doi already in MGI, skip
+            # this will greatly improve the number of hits to the api
+            if doiWithPDF.contains(self._doi):
+                #logger.info('doi id already exists in MGI : %s' % (self._doi))
+                return
 
             # This URL just gets meta info and has a smaller payload
             url = url_base + 'content/article/pii/%s?view=META' % str(self._pii)

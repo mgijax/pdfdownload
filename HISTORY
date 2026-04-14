@@ -1,3 +1,14 @@
+TAG: pdfdownload-6-0-28-6
+DATE: 04/14/2026
+STAFF: lec
+removing shared/MapCache.py because it is no longer used
+elsevier/checking if doi id exists in MGI befor calling SciDirectLib API
+        deleted:    elsevier/README.md
+        deleted:    elsevier/test/test_SciDirectLib.py
+        deleted:    shared/MapCache.py
+        modified:   elsevier/SciDirectLib.py
+        modified:   elsevier/download_elsevier_papers.py
+
 TAG: pdfdownload-6-0-28-5
 TAG: pdfdownload-6-0-28-4
 TAG: pdfdownload-6-0-28-3
