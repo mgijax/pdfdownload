@@ -414,15 +414,15 @@ def downloadPapers (journal, results, startDate, stopDate):
             pmRef = pmAgent.getReferenceInfo(pmid)
             if pmRef != None:
                 publicationDates[pmid] = getStandardDateFormat(pmRef.getDate())
-                debug('journal.mgiName: %s pmid: %s publicationDates[pmid]: %s' % (journal.mgiName, pmid, publicationDates[pmid]))
+                #debug('journal.mgiName: %s pmid: %s publicationDates[pmid]: %s' % (journal.mgiName, pmid, publicationDates[pmid]))
             dateTracker.track(journal.elsevierName, pmRef.getDate(), publicationDates[pmid])
         else:
             # Uncomment this to collect info on pii IDs (internal to SciDirect) that cannot be mapped to PubMed IDs.
-            debug('No PMID for pii %s, title: %s' % (r.getPii(), r.getTitle()))
+            #debug('No PMID for pii %s, title: %s' % (r.getPii(), r.getTitle()))
             pass
                 
         if pmid not in publicationDates:
-            debug('   > missing date for pii %s, pmid %s' % (r.getPii(), pmid))
+            #debug('   > missing date for pii %s, pmid %s' % (r.getPii(), pmid))
             missed = missed + 1
 
         totalCount = totalCount + 1
