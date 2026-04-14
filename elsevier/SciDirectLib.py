@@ -310,8 +310,8 @@ class SciDirectSearch(object):
                 api_response = self._elsClient.execPutRequest(url, queryJson)
                 self._results += api_response['results']
 
-        with open('dump.json', 'w') as f:
-            f.write(json.dumps(self._results, sort_keys=True, indent=2))
+        #with open('dump.json', 'w') as f:
+        #    f.write(json.dumps(self._results, sort_keys=True, indent=2))
 
         return self
 
@@ -352,10 +352,7 @@ class SciDirectReference(object):
         self._detailFields = None      # the results from the details API call
         self._pmid = None
         self._pubType = None
-        self._abstract = None
-        self._volume = None
-
-        # the binary pdf contents are loaded from a subsequent API call
+        # the binary pdf contents are loaded from a subsequent API call, if needed
         self._pdf = None
 
     def _unpackSciDirectResult(self):
@@ -379,7 +376,6 @@ class SciDirectReference(object):
     def getLoadDate(self):    return self._loadDate
     def getPublicationDate(self): return self._publicationDate
     def getSearchResultsFields(self): return self._searchResultsFields
-
     def getElsClient(self):   return self._elsClient
 
     # getters for fields from ref details API call
@@ -389,12 +385,6 @@ class SciDirectReference(object):
     def getPubType(self):
         self._getDetails()
         return self._pubType
-    #def getAbstract(self):     # not supported for now, see _getDetails()
-    #    self._getDetails()
-    #    return self._abstract
-    #def getVolume(self):
-    #   self._getDetails()
-    #    return self._volume
     def getDetails(self):
         self._getDetails()
         return self._detailFields
@@ -422,7 +412,6 @@ class SciDirectReference(object):
                 print('issue completing execGetRequest for url: %s' % url)
                 self._pmid     = 'no PMID'
                 self._pubType  = 'no pubType'
-                self._volume   = 'no volume'
                 return
 
             # TODO: should we dump json output somewhere for debugging?
@@ -434,10 +423,6 @@ class SciDirectReference(object):
             # Other fields are avail, including the full text in xml fmt
             self._pmid     = r.get('pubmed-id', 'no PMID')
             self._pubType  = r['coredata'].get('pubType', 'no pubType')
-            self._volume   = r['coredata'].get('prism:volume', 'no volume')
-
-            # If we need abstract, change back to the full URL above
-            #self._abstract = r['coredata'].get('dc:description', 'no abstract')
 
     # getters for the PDF
     def getPdf(self):
