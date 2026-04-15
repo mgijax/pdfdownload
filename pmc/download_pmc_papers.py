@@ -137,9 +137,9 @@ journals = [
     'Theranostics',
     'Transl Psychiatry'
 ]
-journals = [
-    'Front Immunol',
-]
+#journals = [
+#    'Front Immunol',
+#]
 
 # journals that have their content embargoed for a period of time. We need to search them according to their
 # respective time delays.  Each pair is journal title : number of months of delay.  Note that the 
