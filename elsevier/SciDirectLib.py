@@ -215,7 +215,7 @@ class ElsClient(object):
             headers["X-ELS-Insttoken"] = self.inst_token
         logger.info('Sending PUT request to ' + URL)
         logger.info('Params:  ' + str(jsonParams))
-        logger.info('Headers: ' + str(headers))
+        #logger.info('Headers: ' + str(headers))
 
         req = urllib.request.Request(url=URL, method='PUT')
         
@@ -231,8 +231,7 @@ class ElsClient(object):
 
         ## Check results
         if res.code != 200:        # bail out
-            self._status_msg="HTTP " + str(res.code) + \
-                                " Error from " + URL + "\nusing headers: " + str(headers) + "\nand data: " + str(jsonParams) + ":\n" + res.read()
+            self._status_msg="HTTP " + str(res.code) + " Error from " + URL + "\nusing headers: " + str(headers) + "\nand data: " + str(jsonParams) + ":\n" + res.read()
             logger.info(self._status_msg)       # logger.error() instead?
             raise urllib.HTTPError(self._status_msg)
 
@@ -410,19 +409,16 @@ class SciDirectReference(object):
             #logger.info("Returned response = self._elsClient.execGetRequest(url)")
             if response == 1: # execGetRequest returns 1 if fails
                 print('issue completing execGetRequest for url: %s' % url)
-                self._pmid     = 'no PMID'
-                self._pubType  = 'no pubType'
+                self._pmid = 'no PMID'
+                self._pubType = 'no pubType'
                 return
-
-            # TODO: should we dump json output somewhere for debugging?
-            r = response['full-text-retrieval-response']
-            #print(json.dumps(response, sort_keys=True, indent="  "))
-            self._detailFields = r
 
             # unpack the fields, just these for now.
             # Other fields are avail, including the full text in xml fmt
-            self._pmid     = r.get('pubmed-id', 'no PMID')
-            self._pubType  = r['coredata'].get('pubType', 'no pubType')
+            r = response['full-text-retrieval-response']
+            self._detailFields = r
+            self._pmid = r.get('pubmed-id', 'no PMID')
+            self._pubType = r['coredata'].get('pubType', 'no pubType')
 
     # getters for the PDF
     def getPdf(self):

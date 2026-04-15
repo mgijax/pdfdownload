@@ -162,7 +162,7 @@ journals = [
     Journal('Semin Cancer Biol', 'Seminars in Cancer Biology')
     ]
 #journals = [
-#     Journal('Free Radic Biol Med', 'Free Radical Biology and Medicine')
+#    Journal('Am J Hum Genet', 'The American Journal of Human Genetics'),
 #    ]
 
 # Used to collect and report debugging info related to date handling
@@ -327,6 +327,7 @@ def searchJournal (journal, startDate, stopDate):
     longName = journal.elsevierName
     query = {'pub'        : '"%s"' % longName,
              'qs'         : 'mice',
+             'openAccess' : 'true',
              'loadedAfter': searchDate + 'T00:00:00Z',
              'display'    : { 'sortBy': 'date' }
              }
@@ -404,28 +405,30 @@ def downloadPapers (journal, results, startDate, stopDate):
 
         pmid = r.getPmid()
 
+        # note:  a doi check is done in SciDirectLib/_getDetails() so this may not be necessary
         # skip any papers we already have in the database
         if pubmedWithPDF.contains(pmid):
             inMGI = inMGI + 1
-            debug('paper is already in MGI; skipping: %s' % (pmid))
+            debug('skipped: PMID is already in MGI: %s' % (pmid))
             continue
         
-        if pmid != 'no PMID':
-            pmRef = pmAgent.getReferenceInfo(pmid)
-            if pmRef != None:
-                publicationDates[pmid] = getStandardDateFormat(pmRef.getDate())
-                #debug('journal.mgiName: %s pmid: %s publicationDates[pmid]: %s' % (journal.mgiName, pmid, publicationDates[pmid]))
+        # skip if no pmid
+        if pmid == 'no PMID':
+            debug('skipped: No PMID for pii: %s, title: %s' % (r.getPii(), r.getTitle()))
+            noIDs.append(r.getDoi())
+            continue
+
+        pmRef = pmAgent.getReferenceInfo(pmid)
+
+        if pmRef != None:
+            publicationDates[pmid] = getStandardDateFormat(pmRef.getDate())
             dateTracker.track(journal.elsevierName, pmRef.getDate(), publicationDates[pmid])
-        else:
-            # Uncomment this to collect info on pii IDs (internal to SciDirect) that cannot be mapped to PubMed IDs.
-            #debug('No PMID for pii %s, title: %s' % (r.getPii(), r.getTitle()))
-            pass
+            #debug('journal.mgiName: %s pmid: %s publicationDates[pmid]: %s' % (journal.mgiName, pmid, publicationDates[pmid]))
                 
         if pmid not in publicationDates:
-            #debug('   > missing date for pii %s, pmid %s' % (r.getPii(), pmid))
+            debug('skipped: missing date for pii: %s, pmid %s' % (r.getPii(), pmid))
             missed = missed + 1
-
-        totalCount = totalCount + 1
+            continue
 
         # exclude papers from other journals.  
         # The SciDirect API uses a word search for journal name, so if our desired journal is contained in other journal names,
@@ -436,6 +439,8 @@ def downloadPapers (journal, results, startDate, stopDate):
                 wrongJournals.append(r.getJournal())
             continue
             
+        totalCount = totalCount + 1
+
         try:
             pubType = r.getPubType()
             pubDate = None
@@ -448,18 +453,15 @@ def downloadPapers (journal, results, startDate, stopDate):
                 #debug('ref: %s, %s, %s, %s, %s' % (pii, pmid, r.getDoi(), pubDate, r.getJournal()))
 
                 # write pdf if we have PMID
-                if pmid != 'no PMID':
-                    if ACTUALLY_WRITE_PDFS:
-                        fname = os.path.join(PDF_OUTPUT_DIR, 'PMID_%s.pdf' % pmid)
-                        debug('Scheduling PMID_%s' % pmid)
-                        try:
-                            with open(fname, 'wb') as f:
-                                f.write(r.getPdf())
-                            downloaded.append(pmid)
-                        except:
-                            noPdfs.append(pmid)
-                else:
-                    noIDs.append(r.getDoi())
+                if ACTUALLY_WRITE_PDFS:
+                    fname = os.path.join(PDF_OUTPUT_DIR, 'PMID_%s.pdf' % pmid)
+                    debug('Scheduling PMID_%s' % pmid)
+                    try:
+                        with open(fname, 'wb') as f:
+                            f.write(r.getPdf())
+                        downloaded.append(pmid)
+                    except:
+                        noPdfs.append(pmid)
             else:
                 beyondStop.append(r.getDoi())
 
