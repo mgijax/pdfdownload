@@ -97,72 +97,73 @@ pmDate3 = re.compile('([0-9]{4}) ([A-Z][a-z]{2})')                      # e.g. -
 ###--- journal definitions ---###
 
 class Journal(object):  # simple journal struct
-    def __init__(self, mgiName, elsevierName):
+    def __init__(self, mgiName, elsevierName, doiName):
         self.mgiName = mgiName
         self.elsevierName = elsevierName
+        self.doiName = doiName
 
 journals = [
-    Journal('Am J Hum Genet', 'The American Journal of Human Genetics'),
-    Journal('Am J Pathol', 'The American Journal of Pathology'),
-    Journal('Arch Biochem Biophys', 'Archives of Biochemistry and Biophysics'),
-    Journal('Atherosclerosis', 'Atherosclerosis'),
-    Journal('Behav Brain Res', 'Behavioural Brain Research'),
-    Journal('Biochem Biophys Res Commun', 'Biochemical and Biophysical Research Communications'),
-    Journal('Biochem Pharmacol', 'Biochemical Pharmacology'),
-    Journal('Biochim Biophys Acta Mol Basis Dis', 'Biochimica et Biophysica Acta (BBA) - Molecular Basis of Disease'),
-    Journal('Biochim Biophys Acta Mol Cell Biol Lipids', 'Biochimica et Biophysica Acta (BBA) - Molecular and Cell Biology of Lipids'),
-    Journal('Biochim Biophys Acta Mol Cell Res', 'Biochimica et Biophysica Acta (BBA) - Molecular Cell Research'),
-    Journal('Biol Psychiatry', 'Biological Psychiatry'),
-    Journal('Biomed Pharmacother', 'Biomedicine & Pharmacotherapy'),
-    Journal('Bone', 'Bone'),
-    Journal('Brain Behav Immun', 'Brain, Behavior, and Immunity'),
-    Journal('Brain Res', 'Brain Research'),
-    Journal('Cancer Cell', 'Cancer Cell'),
-    Journal('Cancer Lett', 'Cancer Letters'),
-    Journal('Cell', 'Cell'),
-    Journal('Cell Host Microbe', 'Cell Host & Microbe'),
-    Journal('Cell Immunol', 'Cellular Immunology'),
-    Journal('Cell Metab', 'Cell Metabolism'),
-    Journal('Cell Rep', 'Cell Reports'),
-    Journal('Cell Rep Med', 'Cell Reports Medicine'),
-    Journal('Cell Signal', 'Cellular Signalling'),
-    Journal('Cell Stem Cell', 'Cell Stem Cell'),
-    Journal('Cells Dev', 'Cells & Development'),
-    Journal('Curr Biol', 'Current Biology'),
-    Journal('Dev Biol', 'Developmental Biology'),
-    Journal('Dev Cell', 'Developmental Cell'),
-    Journal('Exp Cell Res', 'Experimental Cell Research'),
-    Journal('Exp Eye Res', 'Experimental Eye Research'),
-    Journal('Exp Hematol', 'Experimental Hematology'),
-    Journal('Exp Neurol', 'Experimental Neurology'),
-    Journal('Free Radic Biol Med', 'Free Radical Biology and Medicine'),
-    Journal('Gastroenterology', 'Gastroenterology'),
-    Journal('Gene', 'Gene'),
-    Journal('Gene Expr Patterns', 'Gene Expression Patterns'),
-    Journal('Hear Res', 'Hearing Research'),
-    Journal('Immunity', 'Immunity'),
-    Journal('Int Immunopharmacol', 'International Immunopharmacology'),
-    Journal('J Allergy Clin Immunol', 'Journal of Allergy and Clinical Immunology'),
-    Journal('J Invest Dermatol', 'Journal of Investigative Dermatology'),
-    Journal('J Mol Cell Cardiol','Journal of Molecular and Cellular Cardiology'),
-    Journal('Matrix Biol', 'Matrix Biology'),
-    Journal('Metabolism', 'Metabolism'),
-    Journal('Mol Cell', 'Molecular Cell'),
-    Journal('Mol Cell Endocrinol', 'Molecular and Cellular Endocrinology'),
-    Journal('Mol Cell Neurosci', 'Molecular and Cellular Neuroscience'),
-    Journal('Mol Immunol', 'Molecular Immunology'),
-    Journal('Mucosal Immunol', 'Mucosal Immunology'),
-    Journal('Neurobiol Aging', 'Neurobiology of Aging'),
-    Journal('Neurobiol Dise', 'Neurobiology of Disease'),
-    Journal('Neuron', 'Neuron'),
-    Journal('Neuropharmacology', 'Neuropharmacology'),
-    Journal('Neurosci Res', 'Neuroscience Research'),
-    Journal('Neurosci Lett', 'Neuroscience Letters'),
-    Journal('Neuroscience', 'Neuroscience'),
-    Journal('Semin Cancer Biol', 'Seminars in Cancer Biology')
+    Journal('Am J Hum Genet', 'The American Journal of Human Genetics', '10.1016/j.ajhg.'),
+    Journal('Am J Pathol', 'The American Journal of Pathology', '10.1016/j.ajpath.'),
+    Journal('Arch Biochem Biophys', 'Archives of Biochemistry and Biophysics', '10.1016/j.abb.'),
+    Journal('Atherosclerosis', 'Atherosclerosis', '10.1016/j.atherosclerosis.'),
+    Journal('Behav Brain Res', 'Behavioural Brain Research', '10.1016/j.bbr.'),
+    Journal('Biochem Biophys Res Commun', 'Biochemical and Biophysical Research Communications', '10.1016/j.bbrc.'),
+    Journal('Biochem Pharmacol', 'Biochemical Pharmacology', '10.1016/j.bcp.'),
+    Journal('Biochim Biophys Acta Mol Basis Dis', 'Biochimica et Biophysica Acta (BBA) - Molecular Basis of Disease', '10.1016/j.bbadis.'),
+    Journal('Biochim Biophys Acta Mol Cell Biol Lipids', 'Biochimica et Biophysica Acta (BBA) - Molecular and Cell Biology of Lipids', '10.1016/j.bbalip.'),
+    Journal('Biochim Biophys Acta Mol Cell Res', 'Biochimica et Biophysica Acta (BBA) - Molecular Cell Research', '10.1016/j.bbamcr.'),
+    Journal('Biol Psychiatry', 'Biological Psychiatry', '10.1016/j.biopsych.'),
+    Journal('Biomed Pharmacother', 'Biomedicine & Pharmacotherapy', '10.1016/j.biopha.'),
+    Journal('Bone', 'Bone', '10.1016/j.bone.'),
+    Journal('Brain Behav Immun', 'Brain, Behavior, and Immunity', '10.1016/j.bbi.'),
+    Journal('Brain Res', 'Brain Research', '10.1016/j.brainres.'),
+    Journal('Cancer Cell', 'Cancer Cell', '10.1016/j.ccr.'),
+    Journal('Cancer Lett', 'Cancer Letters', '10.1016/j.canlet.'),
+    Journal('Cell', 'Cell', '10.1016/j.cell.'),
+    Journal('Cell Host Microbe', 'Cell Host & Microbe', '10.1016/j.chom.'),
+    Journal('Cell Immunol', 'Cellular Immunology', '10.1016/j.cellimm.'),
+    Journal('Cell Metab', 'Cell Metabolism', '10.1016/j.cmet.10.1016/j.cmet.'),
+    Journal('Cell Rep', 'Cell Reports', '10.1016/j.celrep.'),
+    Journal('Cell Rep Med', 'Cell Reports Medicine', '10.1016/j.xcrm.'),
+    Journal('Cell Signal', 'Cellular Signalling', '10.1016/j.cellsig.'),
+    Journal('Cell Stem Cell', 'Cell Stem Cell', '10.1016/j.stem.'),
+    Journal('Cells Dev', 'Cells & Development', '10.1016/j.cdev.'),
+    Journal('Curr Biol', 'Current Biology', '10.1016/j.cub.'),
+    Journal('Dev Biol', 'Developmental Biology', '10.1016/j.ydbio.'),
+    Journal('Dev Cell', 'Developmental Cell', '10.1016/j.devcel.'),
+    Journal('Exp Cell Res', 'Experimental Cell Research', '10.1016/j.yexcr.'),
+    Journal('Exp Eye Res', 'Experimental Eye Research', '10.1016/j.exer.'),
+    Journal('Exp Hematol', 'Experimental Hematology', '10.1016/j.exphem.'),
+    Journal('Exp Neurol', 'Experimental Neurology', '10.1016/j.expneurol.'),
+    Journal('Free Radic Biol Med', 'Free Radical Biology and Medicine', '10.1016/j.freeradbiomed.'),
+    Journal('Gastroenterology', 'Gastroenterology', '10.1016/j.gastro.'),
+    Journal('Gene', 'Gene', '10.1016/j.gene.'),
+    Journal('Gene Expr Patterns', 'Gene Expression Patterns', '10.1016/j.modgep.'),
+    Journal('Hear Res', 'Hearing Research', '10.1016/j.heares.'),
+    Journal('Immunity', 'Immunity', '10.1016/j.immuni.'),
+    Journal('Int Immunopharmacol', 'International Immunopharmacology', '10.1016/j.intimp.'),
+    Journal('J Allergy Clin Immunol', 'Journal of Allergy and Clinical Immunology', '10.1016/j.jaci.'),
+    Journal('J Invest Dermatol', 'Journal of Investigative Dermatology', '10.1046/j.1523-1747'),
+    Journal('J Mol Cell Cardiol','Journal of Molecular and Cellular Cardiology', '10.1016/j.yjmcc.'),
+    Journal('Matrix Biol', 'Matrix Biology', '10.1016/j.matbio.'),
+    Journal('Metabolism', 'Metabolism', '10.1016/j.metabol.'),
+    Journal('Mol Cell', 'Molecular Cell', '10.1016/j.molcel.'),
+    Journal('Mol Cell Endocrinol', 'Molecular and Cellular Endocrinology', '10.1016/j.mce.'),
+    Journal('Mol Cell Neurosci', 'Molecular and Cellular Neuroscience', '10.1016/j.mcn.'),
+    Journal('Mol Immunol', 'Molecular Immunology', '10.1016/j.molimm.'),
+    Journal('Mucosal Immunol', 'Mucosal Immunology', '10.1016/j.mucimm.'),
+    Journal('Neurobiol Aging', 'Neurobiology of Aging', '10.1016/j.neurobiolaging.'),
+    Journal('Neuron', 'Neuron', '10.1016/j.neuron.'),
+    Journal('Neurobiol Dise', 'Neurobiology of Disease', '10.1016/j.nbd.'),
+    Journal('Neuropharmacology', 'Neuropharmacology', '10.1016/j.neuropharm.'),
+    Journal('Neurosci Res', 'Neuroscience Research', '10.1016/j.neures.'),
+    Journal('Neurosci Lett', 'Neuroscience Letters', '10.1016/j.neulet.'),
+    Journal('Neuroscience', 'Neuroscience', '10.1016/j.neuroscience.'),
+    Journal('Semin Cancer Biol', 'Seminars in Cancer Biology', '10.1016/j.semcancer.')
     ]
 #journals = [
-#    Journal('Am J Hum Genet', 'The American Journal of Human Genetics'),
+#    Journal('Atherosclerosis', 'Atherosclerosis', '10.1016/j.atherosclerosis.'),
 #    ]
 
 # Used to collect and report debugging info related to date handling
@@ -324,8 +325,7 @@ def searchJournal (journal, startDate, stopDate):
     searchDateAsStruct = time.localtime(searchDateAsSeconds)
     searchDate = time.strftime('%Y-%m-%d', searchDateAsStruct) 
     
-    longName = journal.elsevierName
-    query = {'pub'        : '"%s"' % longName,
+    query = {'pub'        : '"%s"' % journal.elsevierName,
              'qs'         : 'mice',
              'openAccess' : 'true',
              'loadedAfter': searchDate + 'T00:00:00Z',
@@ -335,7 +335,7 @@ def searchJournal (journal, startDate, stopDate):
 
     debug(' ')
     debug("=" * 40)
-    debug("%s: %d total search results since %s" % (longName, search.getTotalNumResults(), searchDate))
+    debug("%s: %d total search results since %s" % (journal.elsevierName, search.getTotalNumResults(), searchDate))
     return search
 
 def isWithin (pubDate, startDate, stopDate):
@@ -382,8 +382,7 @@ def downloadPapers (journal, results, startDate, stopDate):
     # Given our journal and set of results, download all the PDFs that were published by the stopDate.
     # (The start date was considered in the search, but the stop date is not.  So we need to handle that here.)
     
-    longName = journal.elsevierName         # long-form of the desired journal name
-    refTypes = {}                           # maps from each reference type to a count of those kept
+    refTypes = {}       # maps from each reference type to a count of those kept
     beyondStop = []     # references loaded after the stop date (by DOI)
     wrongJournals = []  # list of wrong journals that were returned by the search
     noIDs = []          # references with no PubMed IDs yet (by DOI)
@@ -392,10 +391,6 @@ def downloadPapers (journal, results, startDate, stopDate):
     
     debug('-- search returned %s references' % results.getTotalNumResults())
 
-    # Sadly, we need to switch to use PubMed to look up accurate publication dates for these references.  
-    # The SciDirect ones are not consistent with the dates in the downloaded PDFs.
-    pmAgent = PubMedAgent.PubMedAgentMedline()
-
     publicationDates = {}           # PM ID -> publication date
     missed = 0
     totalCount = 0
@@ -403,42 +398,44 @@ def downloadPapers (journal, results, startDate, stopDate):
 
     for r in results.getIterator():
 
+        # check Journal by using doi id
+        # The SciDirect API uses a word search for journal name, so there may be results for other journals
+        if journal.doiName not in r.getDoi():
+            #debug('skipped: wrong journal: %s' % (r.getDoi()))
+            wrongJournals.append(journal.doiName)
+            continue
+
+        #
+        # this will call SciDirectLib/getPmid() 
+        # which will call SciDirectLib/_getDetails()
+        # which will call the PubMedAgent.PubMedAgentMedline by the DOI id
+        # which will store all needed info in results (pmid, pubDate, pubType)
+        # 
+
         pmid = r.getPmid()
 
-        # note:  a doi check is done in SciDirectLib/_getDetails() so this may not be necessary
         # skip any papers we already have in the database
         if pubmedWithPDF.contains(pmid):
+            #debug('skipped: PMID is already in MGI: %s' % (pmid))
             inMGI = inMGI + 1
-            debug('skipped: PMID is already in MGI: %s' % (pmid))
             continue
         
         # skip if no pmid
         if pmid == 'no PMID':
-            debug('skipped: No PMID for pii: %s, title: %s' % (r.getPii(), r.getTitle()))
+            #debug('skipped: No PMID for pii: %s, doi %s' % (r.getPii(), r.getDoi()))
             noIDs.append(r.getDoi())
             continue
 
-        pmRef = pmAgent.getReferenceInfo(pmid)
-
-        if pmRef != None:
-            publicationDates[pmid] = getStandardDateFormat(pmRef.getDate())
-            dateTracker.track(journal.elsevierName, pmRef.getDate(), publicationDates[pmid])
+        if r.getPubDate != None:
+            publicationDates[pmid] = getStandardDateFormat(r.getPubDate())
+            dateTracker.track(journal.elsevierName, r.getPubDate(), publicationDates[pmid])
             #debug('journal.mgiName: %s pmid: %s publicationDates[pmid]: %s' % (journal.mgiName, pmid, publicationDates[pmid]))
-                
+
         if pmid not in publicationDates:
             debug('skipped: missing date for pii: %s, pmid %s' % (r.getPii(), pmid))
             missed = missed + 1
             continue
 
-        # exclude papers from other journals.  
-        # The SciDirect API uses a word search for journal name, so if our desired journal is contained in other journal names,
-        # get papers back for those too.  Because the journal name is in the initial data packet received,
-        # eliminating those up front will prevent subsequent calls to retrieve other data.
-        if longName != r.getJournal():
-            if r.getJournal() not in wrongJournals:
-                wrongJournals.append(r.getJournal())
-            continue
-            
         totalCount = totalCount + 1
 
         try:
@@ -463,6 +460,7 @@ def downloadPapers (journal, results, startDate, stopDate):
                     except:
                         noPdfs.append(pmid)
             else:
+                #debug('beyondStop: %s' % r.getDoi())
                 beyondStop.append(r.getDoi())
 
         except: # in case we get any exceptions working w/ this r, let's see it
@@ -477,8 +475,6 @@ def downloadPapers (journal, results, startDate, stopDate):
     debug("-- excluded %d papers because of missing PubMed ID" % len(noIDs))
     debug("-- excluded %d papers that were missing their PDF file" % len(noPdfs))
     debug("-- excluded %d papers because they were from the wrong journal" % len(wrongJournals))
-    if len(wrongJournals) > 0:
-        debug("   > %d other journals: %s" % (len(wrongJournals), ', '.join(wrongJournals)))
     debug("-- %d papers successfully downloaded" % len(downloaded))
     debug("-- summary of matching publication types: %s" % str(refTypes), True)
     

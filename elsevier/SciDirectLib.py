@@ -65,10 +65,12 @@ import json, time, os, logging
 import urllib.request
 from copy import deepcopy
 import caches
+import PubMedAgent
 
 LOGDIR = './logs'
 logger = None
 doiWithPDF = None
+pmAgent = None
 
 def get_logger(name):
     ## Adapted from https://docs.python.org/3/howto/logging-cookbook.html
@@ -105,12 +107,13 @@ def get_logger(name):
 
 def initLogger(logDir):
     # set the logger directory and initialize the logger
-    global LOGDIR, logger, doiWithPDF
+    global LOGDIR, logger, doiWithPDF, pmAgent
 
     LOGDIR = logDir
     logger = get_logger(__name__)
     caches.initialize(os.environ['MGI_PUBLICUSER'], os.environ['MGI_PUBLICPASSWORD'], os.environ['PG_DBSERVER'], os.environ['PG_DBNAME'])
     doiWithPDF = caches.DOICache()
+    pmAgent = PubMedAgent.PubMedAgentMedline()
 
     return
     
@@ -264,9 +267,6 @@ class SciDirectSearch(object):
         self._maxResults = maxResults
         self._increment = increment
         self._query = query
-        if type(self._query) != type({}):
-            raise TypeError('query is not a dictionary')
-
         self._results = []       # the results pulled down so far
         self._tot_num_res = None # total num of matching results at SciDirect
 
@@ -342,15 +342,15 @@ class SciDirectReference(object):
             searchResult = record/dict from SciDirectSearch results from the API
         """
         self._elsClient = elsClient
-        #print(searchResult)
         # unpack fields from SciDirectSearch results
         self._searchResultsFields = searchResult
         self._unpackSciDirectResult()
 
         # fields we have to load from a ref details API call
         self._detailFields = None      # the results from the details API call
-        self._pmid = None
-        self._pubType = None
+        self._pmid = 'no PMID'
+        self._pubType = 'no pubType'
+        self._pubDate = None
         # the binary pdf contents are loaded from a subsequent API call, if needed
         self._pdf = None
 
@@ -360,30 +360,20 @@ class SciDirectReference(object):
         self._pii = self._searchResultsFields['pii']
         self._doi = self._searchResultsFields['doi']
         self._journal = self._searchResultsFields['sourceTitle']
-        try:
-            self._title = self._searchResultsFields['title']
-        except:
-            self._title = ''
-        self._loadDate = self._searchResultsFields['loadDate']
-        self._publicationDate = self._searchResultsFields['publicationDate']
 
     # getters for fields from SciDirectSearch result
     def getPii(self):         return self._pii
     def getDoi(self):         return self._doi
     def getJournal(self):     return self._journal
-    def getTitle(self):       return self._title
-    def getLoadDate(self):    return self._loadDate
-    def getPublicationDate(self): return self._publicationDate
     def getSearchResultsFields(self): return self._searchResultsFields
     def getElsClient(self):   return self._elsClient
+    def getPubType(self):     return self._pubType
+    def getPubDate(self):     return self._pubDate
 
     # getters for fields from ref details API call
     def getPmid(self):
         self._getDetails()
         return self._pmid
-    def getPubType(self):
-        self._getDetails()
-        return self._pubType
     def getDetails(self):
         self._getDetails()
         return self._detailFields
@@ -393,32 +383,27 @@ class SciDirectReference(object):
         """
 
         if not self._detailFields:
-            # This URL gets full info including full text and abstract
-            #url = url_base + 'content/article/pii/' + str(self._pii)
 
             # If doi already in MGI, skip
             # this will greatly improve the number of hits to the api
             if doiWithPDF.contains(self._doi):
-                #logger.info('doi id already exists in MGI : %s' % (self._doi))
+                #logger.info('doi id already exists in MGI: %s' % (self._doi))
                 return
 
-            # This URL just gets meta info and has a smaller payload
-            url = url_base + 'content/article/pii/%s?view=META' % str(self._pii)
-            logger.info("Sending response = self._elsClient.execGetRequest(url)")
-            response = self._elsClient.execGetRequest(url)
-            #logger.info("Returned response = self._elsClient.execGetRequest(url)")
-            if response == 1: # execGetRequest returns 1 if fails
-                #print('issue completing execGetRequest for url: %s' % url)
-                self._pmid = 'no PMID'
-                self._pubType = 'no pubType'
+            # use pmAgent to return pubmed info by doi
+            doi = "'" + self._doi + "'"
+            try:
+                logger.info('Sending pmAgent.getReferences(%s)' % (doi))
+                mapping = pmAgent.getReferences([doi])
+                refMappingList = mapping[doi]
+                pmRef = refMappingList[0]
+                self._pmid = pmRef.getPubMedID()
+                self._pubType = pmRef.getPublicationType()
+                self._pubDate = pmRef.getDate()
                 return
-
-            # unpack the fields, just these for now.
-            # Other fields are avail, including the full text in xml fmt
-            r = response['full-text-retrieval-response']
-            self._detailFields = r
-            self._pmid = r.get('pubmed-id', 'no PMID')
-            self._pubType = r['coredata'].get('pubType', 'no pubType')
+            except:
+                #logger.info('Not found in pmAgent.getReferences(%s)' % (doi))
+                return
 
     # getters for the PDF
     def getPdf(self):
