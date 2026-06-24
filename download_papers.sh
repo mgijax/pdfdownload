@@ -26,9 +26,7 @@ find ${PDFDOWNLOADLOGDIR}/* -type f -mtime +90 -exec rm -rf {} \;
 
 # if we have a current log file, rename it with a date/time and start a new one
 LOG=${PDFDOWNLOADLOGDIR}/`basename $0`.log
-if [ -e $LOG ]; then
-	mv $LOG $LOG.`date '+%Y%m%d.%H%M'` | tee -a ${LOG}
-fi
+rm -rf $LOG
 touch $LOG
 
 date | tee -a ${LOG}

@@ -1,3 +1,10 @@
+TAG: pdfdownload-6-0-28-11
+DATE: 04/17/2026
+STAFF: lec
+do not store past LOG files
+        modified:   download_elsevier_papers.sh
+        modified:   download_papers.sh
+
 TAG: pdfdownload-6-0-28-10
 DATE: 04/17/2026
 STAFF: lec
