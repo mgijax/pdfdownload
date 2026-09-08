@@ -16,8 +16,8 @@ if [ ! -d ${PDFDOWNLOADLOGDIR} ]; then
 	mkdir ${PDFDOWNLOADLOGDIR}
 fi
  
-# remove log files older than 90 days
-find ${PDFDOWNLOADLOGDIR}/* -type f -mtime +90 -exec rm -rf {} \;
+# remove log files older than 30 days
+find ${PDFDOWNLOADLOGDIR}/* -type f -mtime +30 -exec rm -rf {} \;
 
 # if we have a current log file, rename it with a date/time and start a new one
 LOG=${PDFDOWNLOADLOGDIR}/`basename $0`.log

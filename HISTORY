@@ -1,3 +1,10 @@
+TAG: pdfdownload-6-0-29-3
+DATE: 09/08/2026
+STAFF: lec
+only save 30 days of log files
+        modified:   download_elsevier_papers.sh
+        modified:   download_pmc_papers.sh
+
 TAG: pdfdownload-6-0-29-2
 TAG: pdfdownload-6-0-29-1
 DATE: 08/25/2026
