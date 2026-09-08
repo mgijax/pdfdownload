@@ -163,9 +163,9 @@ embargoedJournalDelays = {
     'Neuropsychopharmacology' : 12,
     'Proc Natl Acad Sci U S A' : 6
     }
-embargoedJournalDelays = {
-    'Proc Natl Acad Sci U S A' : 6
-}
+#embargoedJournalDelays = {
+#    'Proc Natl Acad Sci U S A' : 6
+#}
 embargoedJournals = list(embargoedJournalDelays.keys())
 embargoedJournals.sort()
 
